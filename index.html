@@ -68,12 +68,15 @@
             grid-template-columns: 450px 1fr;
             gap: 20px;
             align-items: start;
+            height: calc(100vh - 130px);
         }
 
         .left-panel {
             display: flex;
             flex-direction: column;
             gap: 20px;
+            height: 100%;
+            min-height: 0;
         }
 
         .entry-card {
@@ -81,9 +84,7 @@
             border-radius: 15px;
             padding: 25px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            position: sticky;
-            top: 20px;
-            z-index: 10;
+            flex-shrink: 0;
         }
 
         .entry-card h2 {
@@ -168,23 +169,30 @@
         }
 
         .history-panel {
-            background: rgba(255, 255, 255, 0.98);
+            background: #ffffff;
             border-radius: 15px;
-            padding: 25px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            max-height: 600px;
-            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .history-panel h2 {
             color: #0891b2;
-            margin-bottom: 15px;
+            margin: 0;
+            padding: 25px 25px 15px 25px;
             font-size: 1.3em;
-            position: sticky;
-            top: 0;
-            background: rgba(255, 255, 255, 0.98);
-            padding-bottom: 10px;
-            z-index: 10;
+            background: #ffffff;
+            flex-shrink: 0;
+        }
+
+        .history-scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 0 25px 25px 25px;
         }
 
         .right-panel {
@@ -301,8 +309,18 @@
             background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
             color: white;
             position: sticky;
-            top: 50px;
+            top: 0;
             z-index: 9;
+        }
+
+        .history-table thead::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -4px;
+            height: 4px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1), transparent);
         }
 
         .history-table th {
@@ -376,60 +394,6 @@
             background: #dc2626;
         }
 
-        .edit-btn {
-            background: #06b6d4;
-            color: white;
-            border: none;
-            padding: 5px 12px;
-            border-radius: 5px;
-            font-size: 0.8em;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .edit-btn:hover {
-            background: #0891b2;
-        }
-
-        .save-btn {
-            background: #059669;
-            color: white;
-            border: none;
-            padding: 5px 12px;
-            border-radius: 5px;
-            font-size: 0.8em;
-            cursor: pointer;
-            margin-right: 4px;
-            transition: background 0.2s;
-        }
-
-        .save-btn:hover {
-            background: #047857;
-        }
-
-        .cancel-btn {
-            background: #64748b;
-            color: white;
-            border: none;
-            padding: 5px 12px;
-            border-radius: 5px;
-            font-size: 0.8em;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .cancel-btn:hover {
-            background: #475569;
-        }
-
-        .editing-input {
-            width: 90px;
-            padding: 4px 8px;
-            border: 2px solid #06b6d4;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-
         .first-reading-row {
             font-style: italic;
             color: #999;
@@ -470,6 +434,11 @@
         @media (max-width: 1024px) {
             .main-content {
                 grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .left-panel {
+                height: auto;
             }
 
             .right-panel {
@@ -477,9 +446,8 @@
                 top: 0;
             }
 
-            .entry-card {
-                position: relative;
-                top: 0;
+            .history-panel {
+                max-height: 500px;
             }
         }
 
@@ -530,7 +498,7 @@
                     </div>
                     
                     <div class="past-due-alert" id="pastDueAlert">
-                        âš ï¸ ⚠️ Entry Past Due - Please log yesterday's reading
+                        ⚠️ Entry Past Due - Please log yesterday's reading
                     </div>
                     <div class="input-group">
                         <label for="meterReading">Current Meter Reading (kWh)</label>
@@ -542,7 +510,7 @@
 
                 <div class="history-panel">
                     <h2>📈 Daily Readings</h2>
-                    <div id="historyList">
+                    <div class="history-scroll-container" id="historyList">
                         <div class="no-data">No data yet. Enter your first meter reading above!</div>
                     </div>
                 </div>
@@ -581,7 +549,7 @@
                             <div class="value" id="avgUsage">--</div>
                     </div>
                     <div class="summary-stat">
-                        <div class="label">Days Under Target ✓</div>
+                        <div class="label">Days Under Target</div>
                         <div class="value" id="daysUnder">--</div>
                     </div>
                 </div>
@@ -793,7 +761,7 @@
                     meterReading: parseFloat(row[1]),
                     dailyUsage: row[2] ? parseFloat(row[2]) : null,
                     entryTime: row[3] || null
-                }));
+                })).reverse();
 
                 // Save to localStorage as cache
                 localStorage.setItem('energyData', JSON.stringify(data));
@@ -836,13 +804,16 @@
             
             chartContainer.style.display = 'block';
             
-            // Prepare data (data is already newest first, reverse it for chart to show oldestâ†’newest leftâ†’right)
+            // Prepare data (data is already newest first, reverse it for chart to show oldest→newest left→right)
             const reversedData = [...usageData].reverse();
             const labels = reversedData.map(item => {
                 const date = new Date(item.date + 'T12:00:00');
                 return date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
             });
             const usageValues = reversedData.map(item => item.dailyUsage);
+            
+            // Find the index of the solar panel activation date (6 Feb 2026)
+            const solarStartIndex = reversedData.findIndex(item => item.date === '2026-02-06');
             
             // Create background colors based on thresholds
             const backgroundColors = usageValues.map(usage => {
@@ -928,14 +899,19 @@
                                     }
                                     const value = context.parsed.y;
                                     const diff = value - 30;
-                                    const status = value <= 30 ? 'âœ“ Under target' : 
-                                                   value <= 35 ? 'âš  Slightly over' : 
+                                    const status = value <= 30 ? '✓ Under target' : 
+                                                   value <= 35 ? '⚠ Slightly over' : 
                                                    '✗ Over target';
-                                    return [
+                                    const isSolarDay = context.dataIndex >= solarStartIndex && solarStartIndex !== -1;
+                                    const result = [
                                         `Usage: ${value.toFixed(1)} kWh`,
                                         `Diff: ${diff > 0 ? '+' : ''}${diff.toFixed(1)} kWh`,
                                         status
                                     ];
+                                    if (isSolarDay) {
+                                        result.push('☀️ Solar active');
+                                    }
+                                    return result;
                                 }
                             }
                         }
@@ -970,7 +946,37 @@
                                 }
                             }
                         }
-                    }
+                    },
+                    plugins: [{
+                        id: 'solarAnnotation',
+                        afterDraw: function(chart) {
+                            if (solarStartIndex === -1) return;
+                            
+                            const ctx = chart.ctx;
+                            const xAxis = chart.scales.x;
+                            const yAxis = chart.scales.y;
+                            
+                            const x = xAxis.getPixelForValue(solarStartIndex);
+                            const yTop = yAxis.top;
+                            const yBottom = yAxis.bottom;
+                            
+                            // Draw vertical dashed line
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.setLineDash([5, 5]);
+                            ctx.strokeStyle = '#f59e0b';
+                            ctx.lineWidth = 2;
+                            ctx.moveTo(x, yTop);
+                            ctx.lineTo(x, yBottom);
+                            ctx.stroke();
+                            
+                            // Draw sun emoji at top
+                            ctx.font = 'bold 20px sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('☀️', x, yTop - 5);
+                            ctx.restore();
+                        }
+                    }]
                 }
             });
         }
@@ -1137,18 +1143,13 @@
             
             const data = loadData();
             const now = new Date();
-            
-            // Get YESTERDAY's date (since we're recording yesterday's usage)
-            const yesterday = new Date(now);
-            yesterday.setDate(yesterday.getDate() - 1);
-            const dateStr = yesterday.toISOString().split('T')[0];
-            
+            const dateStr = now.toISOString().split('T')[0];
             const timeStr = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM in 24H format
             
-            // Check if there's already an entry for yesterday
+            // Check if there's already an entry for today
             const existingIndex = data.findIndex(item => item.date === dateStr);
             if (existingIndex !== -1) {
-                if (!confirm('You already have an entry for yesterday. Do you want to replace it?')) {
+                if (!confirm('You already have an entry for today. Do you want to replace it?')) {
                     return;
                 }
                 data.splice(existingIndex, 1);
@@ -1178,84 +1179,7 @@
             
             input.value = '';
             displayHistory();
-            updateCountdown(); // Reset countdown and refresh past due status immediately
-        }
-
-        // Edit entry
-        function editEntry(date) {
-            const row = document.querySelector(`tr[data-date="${date}"]`);
-            if (!row) return;
-            
-            const data = loadData();
-            const entry = data.find(item => item.date === date);
-            if (!entry) return;
-            
-            // Store original values
-            row.dataset.originalReading = entry.meterReading;
-            
-            // Make meter reading editable
-            const meterCell = row.querySelector('.meter-col');
-            const currentReading = entry.meterReading;
-            meterCell.innerHTML = `<input type="number" class="editing-input" value="${currentReading}" step="0.1" id="edit-${date}">`;
-            
-            // Change action buttons to Save/Cancel
-            const actionCell = row.querySelector('.action-col');
-            actionCell.innerHTML = `
-                <button class="save-btn" onclick="saveEdit('${date}')">Save</button>
-                <button class="cancel-btn" onclick="cancelEdit('${date}')">Cancel</button>
-            `;
-            
-            // Focus the input
-            document.getElementById(`edit-${date}`).focus();
-        }
-
-        // Save edited entry
-        function saveEdit(date) {
-            const input = document.getElementById(`edit-${date}`);
-            const newReading = parseFloat(input.value);
-            
-            if (isNaN(newReading) || newReading < 0) {
-                alert('Please enter a valid meter reading');
-                return;
-            }
-            
-            const data = loadData();
-            const entryIndex = data.findIndex(item => item.date === date);
-            if (entryIndex === -1) return;
-            
-            // Update the meter reading
-            data[entryIndex].meterReading = newReading;
-            
-            // Recalculate daily usage for this entry and the next one
-            // Current entry's usage = current reading - previous reading
-            if (entryIndex < data.length - 1) {
-                const prevReading = data[entryIndex + 1].meterReading;
-                data[entryIndex].dailyUsage = newReading - prevReading;
-                
-                if (data[entryIndex].dailyUsage < 0) {
-                    alert('New reading is less than the previous reading. Please check your input.');
-                    return;
-                }
-            }
-            
-            // Next entry's usage needs to be recalculated if this isn't the newest entry
-            if (entryIndex > 0) {
-                const nextEntry = data[entryIndex - 1];
-                nextEntry.dailyUsage = nextEntry.meterReading - newReading;
-                
-                if (nextEntry.dailyUsage < 0) {
-                    alert('This change would make the next day\'s usage negative. Please check your input.');
-                    return;
-                }
-            }
-            
-            saveData(data);
-            displayHistory();
-        }
-
-        // Cancel edit
-        function cancelEdit(date) {
-            displayHistory(); // Just refresh to restore original state
+            updateCountdown(); // Refresh past due status
         }
 
         // Get status based on usage
@@ -1267,7 +1191,7 @@
 
         // Get status text
         function getStatusText(usage) {
-            if (usage <= 30) return 'Under Target ✓ âœ“';
+            if (usage <= 30) return 'Under Target ✓';
             if (usage <= 35) return 'Slightly Over';
             return 'Over Target';
         }
@@ -1310,7 +1234,6 @@
                             <th>Meter Reading</th>
                             <th>Time</th>
                             <th class="status-col">Status</th>
-                            <th class="status-col">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1331,7 +1254,7 @@
                             <td class="date-col">${dateFormatted}</td>
                             <td colspan="2">Baseline: ${item.meterReading.toFixed(1)} kWh</td>
                             <td>${entryTime}</td>
-                            <td class="status-col">â€”</td>
+                            <td class="status-col">—</td>
                         </tr>
                     `;
                 } else {
@@ -1340,13 +1263,12 @@
                     const diffText = item.dailyUsage <= 30 ? diff : `+${diff}`;
                     
                     html += `
-                        <tr data-date="${item.date}">
+                        <tr>
                             <td class="date-col">${dateFormatted}</td>
                             <td class="usage-col ${status}">${item.dailyUsage.toFixed(1)} kWh <span style="font-size: 0.85em; font-weight: normal;">(${diffText})</span></td>
                             <td class="meter-col">${item.meterReading.toFixed(1)} kWh</td>
                             <td class="meter-col">${entryTime}</td>
                             <td class="status-col"><span class="status-indicator ${status}"></span></td>
-                            <td class="status-col action-col"><button class="edit-btn" onclick="editEntry('${item.date}')">Edit</button></td>
                         </tr>
                     `;
                 }
@@ -1371,7 +1293,7 @@
             const connectBtn = document.getElementById('connectBtn');
             
             if (GOOGLE_CONFIG.spreadsheetId && accessToken) {
-                statusText.textContent = '✓ Connected to Google Sheets';
+                statusText.textContent = '✅ Connected to Google Sheets';
                 statusText.style.color = '#059669';
                 connectBtn.style.display = 'none';
             } else {
