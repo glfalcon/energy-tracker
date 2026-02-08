@@ -793,7 +793,7 @@
                     meterReading: parseFloat(row[1]),
                     dailyUsage: row[2] ? parseFloat(row[2]) : null,
                     entryTime: row[3] || null
-                })).reverse();
+                }));
 
                 // Save to localStorage as cache
                 localStorage.setItem('energyData', JSON.stringify(data));
