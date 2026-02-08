@@ -765,10 +765,31 @@
                     width: 3
                 },
                 markers: {
-                    size: 6,
-                    strokeWidth: 2,
-                    hover: { size: 8 },
+                    size: 8,
+                    strokeWidth: 0,
+                    strokeColors: '#fff',
+                    hover: { size: 10 },
                     discrete: discreteMarkers
+                },
+                dataLabels: {
+                    enabled: true,
+                    formatter: function(val) {
+                        return val.toFixed(0);
+                    },
+                    offsetY: -10,
+                    style: {
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        colors: usageValues.map(v => v <= 30 ? '#059669' : v <= 35 ? '#f59e0b' : '#dc2626')
+                    },
+                    background: {
+                        enabled: true,
+                        foreColor: '#fff',
+                        padding: 4,
+                        borderRadius: 4,
+                        borderWidth: 0,
+                        dropShadow: { enabled: false }
+                    }
                 },
                 xaxis: {
                     categories: labels,
