@@ -572,7 +572,10 @@
 
                     <div id="googleStatus" style="background: #f3f4f6; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85em;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span id="statusText">📱 Not connected to Google Sheets</span>
+                            <div>
+                                <span id="statusText">📱 Not connected to Google Sheets</span>
+                                <div id="lastSyncText" style="font-size: 0.85em; opacity: 0.7; margin-top: 2px;"></div>
+                            </div>
                             <div style="display: flex; gap: 8px;">
                                 <button onclick="syncData()" id="syncBtn" style="background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.85em; display: none;">🔄 Sync</button>
                                 <button onclick="authorizeGoogle()" id="connectBtn" style="background: #0891b2; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.85em;">Connect</button>
@@ -916,6 +919,8 @@
 
                 const rows = response.result.values;
                 if (!rows || rows.length === 0) {
+                    // Save sync timestamp even if no data
+                    localStorage.setItem('lastSyncTime', new Date().toISOString());
                     return false;
                 }
 
@@ -927,13 +932,20 @@
                     entryTime: row[3] || null
                 })).reverse();
 
-                // Save to localStorage as cache
+                // Save to localStorage as cache AND save sync timestamp
                 localStorage.setItem('energyData', JSON.stringify(data));
+                localStorage.setItem('lastSyncTime', new Date().toISOString());
                 displayHistory();
 
                 return true;
             } catch (err) {
                 console.error('Error syncing from sheets:', err);
+                // Token might be expired - clear it so user can re-auth
+                if (err.status === 401 || err.status === 403) {
+                    accessToken = null;
+                    localStorage.removeItem('energyTrackerAccessToken');
+                    updateGoogleStatus();
+                }
                 return false;
             }
         }
@@ -1519,17 +1531,43 @@
             const statusText = document.getElementById('statusText');
             const connectBtn = document.getElementById('connectBtn');
             const syncBtn = document.getElementById('syncBtn');
+            const lastSyncText = document.getElementById('lastSyncText');
 
             if (GOOGLE_CONFIG.spreadsheetId && accessToken) {
                 statusText.textContent = '✅ Connected to Google Sheets';
                 statusText.style.color = '#059669';
                 connectBtn.style.display = 'none';
                 syncBtn.style.display = 'block';
+
+                // Show last sync time
+                const lastSync = localStorage.getItem('lastSyncTime');
+                if (lastSync) {
+                    const syncDate = new Date(lastSync);
+                    const now = new Date();
+                    const diffMs = now - syncDate;
+                    const diffMins = Math.floor(diffMs / 60000);
+                    const diffHours = Math.floor(diffMins / 60);
+
+                    let timeAgo;
+                    if (diffMins < 1) {
+                        timeAgo = 'just now';
+                    } else if (diffMins < 60) {
+                        timeAgo = `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+                    } else if (diffHours < 24) {
+                        timeAgo = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                    } else {
+                        timeAgo = syncDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                    }
+                    lastSyncText.textContent = `Last synced: ${timeAgo}`;
+                } else {
+                    lastSyncText.textContent = 'Not synced yet';
+                }
             } else {
                 statusText.textContent = '📱 Not connected to Google Sheets';
                 statusText.style.color = '#64748b';
                 connectBtn.style.display = 'block';
                 syncBtn.style.display = 'none';
+                lastSyncText.textContent = '';
             }
         }
 
@@ -1545,6 +1583,7 @@
                 const synced = await syncFromSheets();
                 if (synced) {
                     syncBtn.textContent = '✅ Done!';
+                    updateGoogleStatus(); // Update last sync time
                     setTimeout(() => {
                         syncBtn.textContent = originalText;
                     }, 2000);
