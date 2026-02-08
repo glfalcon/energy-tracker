@@ -946,38 +946,38 @@
                                 }
                             }
                         }
-                    },
-                    plugins: [{
-                        id: 'solarAnnotation',
-                        afterDraw: function(chart) {
-                            if (solarStartIndex === -1) return;
-                            
-                            const ctx = chart.ctx;
-                            const xAxis = chart.scales.x;
-                            const yAxis = chart.scales.y;
-                            
-                            const x = xAxis.getPixelForValue(solarStartIndex);
-                            const yTop = yAxis.top;
-                            const yBottom = yAxis.bottom;
-                            
-                            // Draw vertical dashed line
-                            ctx.save();
-                            ctx.beginPath();
-                            ctx.setLineDash([5, 5]);
-                            ctx.strokeStyle = '#f59e0b';
-                            ctx.lineWidth = 2;
-                            ctx.moveTo(x, yTop);
-                            ctx.lineTo(x, yBottom);
-                            ctx.stroke();
-                            
-                            // Draw sun emoji at top
-                            ctx.font = 'bold 20px sans-serif';
-                            ctx.textAlign = 'center';
-                            ctx.fillText('☀️', x, yTop - 5);
-                            ctx.restore();
-                        }
-                    }]
-                }
+                    }
+                },
+                plugins: [{
+                    id: 'solarAnnotation',
+                    afterDraw: function(chart) {
+                        if (solarStartIndex === -1) return;
+                        
+                        const ctx = chart.ctx;
+                        const xAxis = chart.scales.x;
+                        const yAxis = chart.scales.y;
+                        
+                        const x = xAxis.getPixelForValue(solarStartIndex);
+                        const yTop = yAxis.top;
+                        const yBottom = yAxis.bottom;
+                        
+                        // Draw vertical dashed line
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.setLineDash([5, 5]);
+                        ctx.strokeStyle = '#f59e0b';
+                        ctx.lineWidth = 2;
+                        ctx.moveTo(x, yTop);
+                        ctx.lineTo(x, yBottom);
+                        ctx.stroke();
+                        
+                        // Draw sun emoji at top
+                        ctx.font = 'bold 20px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('☀️', x, yTop - 5);
+                        ctx.restore();
+                    }
+                }]
             });
         }
 
