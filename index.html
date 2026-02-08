@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Energy Tracker</title>
+    <script>
+        // Auto-redirect to mobile version on small screens
+        if (window.innerWidth < 768) {
+            window.location.href = 'mobile.html';
+        }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header-left h1 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header-left p {
+            opacity: 0.9;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 15px;
+            align-items: stretch;
+        }
+
+        .weather-widget {
+            background: rgba(6, 182, 212, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 12px 20px;
+            text-align: center;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            min-width: 120px;
+        }
+
+        .weather-widget .label {
+            font-size: 0.75em;
+            opacity: 0.9;
+            margin-bottom: 2px;
+        }
+
+        .weather-display {
+            font-size: 1.3em;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+        }
+
+        .weather-current {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .weather-icon {
+            font-size: 1.2em;
+        }
+
+        .weather-hilo {
+            font-size: 0.55em;
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        .weather-loading {
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+
+        .countdown-mini {
+            background: rgba(6, 182, 212, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 12px 20px;
+            text-align: center;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+
+        .countdown-mini .label {
+            font-size: 0.75em;
+            opacity: 0.9;
+            margin-bottom: 2px;
+        }
+
+        .countdown-mini .due-time {
+            font-size: 0.75em;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+
+        .countdown-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 450px 1fr;
+            gap: 20px;
+            align-items: start;
+            height: calc(100vh - 130px);
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .entry-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+
+        .entry-card h2 {
+            color: #0891b2;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .past-due-alert {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            color: #92400e;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .past-due-alert.show {
+            display: block;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.95em;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1.1em;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #06b6d4;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(6, 182, 212, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #64748b;
+            margin-top: 8px;
+            font-size: 0.85em;
+            padding: 8px 15px;
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 5px 15px rgba(100, 116, 139, 0.4);
+        }
+
+        .history-panel {
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .history-panel h2 {
+            color: #0891b2;
+            margin: 0;
+            padding: 25px 25px 15px 25px;
+            font-size: 1.3em;
+            background: #ffffff;
+            flex-shrink: 0;
+        }
+
+        .history-scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 0 25px 25px 25px;
+        }
+
+        .right-panel {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        .right-panel h2 {
+            color: #0891b2;
+            margin-bottom: 0;
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .bill-estimate {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .bill-estimate h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            opacity: 0.8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bill-amount {
+            font-size: 2.8em;
+            font-weight: 700;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .bill-breakdown {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .bill-item {
+            font-size: 0.85em;
+        }
+
+        .bill-item-label {
+            opacity: 0.7;
+            margin-bottom: 3px;
+        }
+
+        .bill-item-value {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .bill-projection {
+            font-size: 0.75em;
+            opacity: 0.6;
+            margin-top: 12px;
+            font-style: italic;
+        }
+
+        .chart-section {
+            flex-shrink: 0;
+        }
+
+        .chart-section h3 {
+            color: #0891b2;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 10px 0;
+            z-index: 5;
+        }
+
+        #chartContainer {
+            flex-shrink: 0;
+            min-height: 400px;
+        }
+
+        #chartContainer canvas {
+            max-height: 500px;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .history-table thead {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 9;
+        }
+
+        .history-table thead::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -4px;
+            height: 4px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1), transparent);
+        }
+
+        .history-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .history-table tbody tr {
+            border-bottom: 1px solid #e0e0e0;
+            transition: background-color 0.2s;
+        }
+
+        .history-table tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .history-table td {
+            padding: 10px 12px;
+            font-size: 0.95em;
+        }
+
+        .date-col {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .usage-col {
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+
+        .usage-col.good {
+            color: #059669;
+        }
+
+        .usage-col.warning {
+            color: #f59e0b;
+        }
+
+        .usage-col.over {
+            color: #dc2626;
+        }
+
+        .meter-col {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .status-col {
+            text-align: center;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-indicator.good {
+            background: #059669;
+        }
+
+        .status-indicator.warning {
+            background: #f59e0b;
+        }
+
+        .status-indicator.over {
+            background: #dc2626;
+        }
+
+        .first-reading-row {
+            font-style: italic;
+            color: #999;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            font-style: italic;
+        }
+
+        .summary {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .summary-stat {
+            display: inline-block;
+            margin: 0 20px;
+        }
+
+        .summary-stat .label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .summary-stat .value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .left-panel {
+                height: auto;
+            }
+
+            .right-panel {
+                position: relative;
+                top: 0;
+            }
+
+            .history-panel {
+                max-height: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>⚡ Daily Energy Tracker</h1>
+                <p>Target: 30 kWh per day</p>
+            </div>
+            <div class="header-right">
+                <div class="weather-widget">
+                    <div class="label">London Weather</div>
+                    <div class="weather-display" id="weatherDisplay">
+                        <span class="weather-loading">Loading...</span>
+                    </div>
+                </div>
+                <div class="countdown-mini">
+                    <div class="label">Reading Due</div>
+                    <div class="countdown-display" id="countdown">--:--:--</div>
+                    <div class="due-time">by 07:00</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="entry-card">
+                    <h2>📊 Record Yesterday's Usage</h2>
+
+                    <div id="googleStatus" style="background: #f3f4f6; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85em;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span id="statusText">📱 Not connected to Google Sheets</span>
+                                <div id="lastSyncText" style="font-size: 0.85em; opacity: 0.7; margin-top: 2px;"></div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="syncData()" id="syncBtn" style="background: #059669; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.85em; display: none;">🔄 Sync</button>
+                                <button onclick="authorizeGoogle()" id="connectBtn" style="background: #0891b2; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.85em;">Connect</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="past-due-alert" id="pastDueAlert">
+                        ⚠️ Entry Past Due - Please log yesterday's reading
+                    </div>
+                    <div class="input-group">
+                        <label for="meterReading">Current Meter Reading (kWh)</label>
+                        <input type="number" id="meterReading" placeholder="e.g., 5920.5" step="0.1">
+                    </div>
+                    <button class="btn" onclick="addReading()">Add Reading</button>
+                    <button class="btn btn-secondary" onclick="resetData()">Reset to Historical Data</button>
+                </div>
+
+                <div class="history-panel">
+                    <h2>📈 Daily Readings</h2>
+                    <div class="history-scroll-container" id="historyList">
+                        <div class="no-data">No data yet. Enter your first meter reading above!</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="bill-estimate" id="billEstimate" style="display: none;">
+                    <h3>Estimated Bill for 19 Feb</h3>
+                    <div class="bill-amount" id="billAmount">£0.00</div>
+                    <div class="bill-change" id="billChange" style="display: none; font-size: 0.9em; margin-bottom: 10px;"></div>
+                    <div class="bill-breakdown">
+                        <div class="bill-item">
+                            <div class="bill-item-label">Usage Cost</div>
+                            <div class="bill-item-value" id="usageCost">£0.00</div>
+                        </div>
+                        <div class="bill-item">
+                            <div class="bill-item-label">Standing Charge</div>
+                            <div class="bill-item-value" id="standingCost">£0.00</div>
+                        </div>
+                        <div class="bill-item">
+                            <div class="bill-item-label">Total kWh</div>
+                            <div class="bill-item-value" id="totalKwh">0</div>
+                        </div>
+                        <div class="bill-item">
+                            <div class="bill-item-label">Days</div>
+                            <div class="bill-item-value" id="billingDays">0</div>
+                        </div>
+                    </div>
+                    <div class="bill-projection" id="billProjection"></div>
+                </div>
+
+                <div class="chart-section">
+                    <h3>Usage Chart</h3>
+                    <div id="summary" class="summary" style="display: none;">
+                        <div class="summary-stat">
+                            <div class="label">7-Day Average</div>
+                            <div class="value" id="avgUsage">--</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="label">Days Under Target</div>
+                        <div class="value" id="daysUnder">--</div>
+                    </div>
+                </div>
+                <div id="chartContainer" style="display: none;">
+                    <div id="usageChart"></div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.1/dist/apexcharts.min.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="app.js"></script>
+</body>
+</html>

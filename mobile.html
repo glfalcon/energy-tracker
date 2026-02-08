@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Energy Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: #333;
+            padding-bottom: 70px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            padding: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .header h1 {
+            font-size: 1.4em;
+        }
+
+        .header-widgets {
+            display: flex;
+            gap: 10px;
+        }
+
+        .mini-widget {
+            background: rgba(6, 182, 212, 0.2);
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.85em;
+        }
+
+        .mini-widget .value {
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+
+        .weather-current {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .weather-hilo {
+            font-size: 0.75em;
+            opacity: 0.8;
+        }
+
+        /* Quick Stats Row */
+        .quick-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 0 15px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-card .label {
+            font-size: 0.75em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #0891b2;
+            margin-top: 5px;
+        }
+
+        .stat-card.bill .value {
+            background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-card .sub {
+            font-size: 0.7em;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: white;
+            color: #666;
+            font-size: 0.75em;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: #0891b2;
+            background: #f0fdfa;
+        }
+
+        .tab-btn .icon {
+            font-size: 1.5em;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            padding: 15px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Input Card */
+        .input-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .input-card h2 {
+            color: #0891b2;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+
+        .google-status {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.85em;
+        }
+
+        .google-status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-text {
+            font-size: 0.9em;
+        }
+
+        .last-sync {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-top: 3px;
+        }
+
+        .google-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .google-btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85em;
+            cursor: pointer;
+        }
+
+        .google-btn.connect {
+            background: #0891b2;
+            color: white;
+        }
+
+        .google-btn.sync {
+            background: #059669;
+            color: white;
+        }
+
+        .past-due-alert {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            color: #92400e;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .past-due-alert.show {
+            display: block;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #06b6d4;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: #64748b;
+            margin-top: 10px;
+            font-size: 0.9em;
+            padding: 12px;
+        }
+
+        /* Readings List */
+        .readings-list {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .reading-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reading-item:last-child {
+            border-bottom: none;
+        }
+
+        .reading-date {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .reading-day {
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        .reading-usage {
+            text-align: right;
+        }
+
+        .reading-kwh {
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+
+        .reading-kwh.good { color: #059669; }
+        .reading-kwh.warning { color: #f59e0b; }
+        .reading-kwh.over { color: #dc2626; }
+
+        .reading-diff {
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        .reading-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+
+        .reading-status.good { background: #059669; }
+        .reading-status.warning { background: #f59e0b; }
+        .reading-status.over { background: #dc2626; }
+
+        .baseline-row {
+            opacity: 0.6;
+            font-style: italic;
+        }
+
+        .baseline-row .reading-kwh {
+            font-size: 1em;
+            font-weight: 500;
+            color: #666;
+        }
+
+        /* Chart Tab */
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .chart-container h3 {
+            color: #0891b2;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+
+        #mobileChart {
+            width: 100%;
+            min-height: 250px;
+        }
+
+        /* Bill Details */
+        .bill-details {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .bill-details h3 {
+            font-size: 0.85em;
+            opacity: 0.8;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .bill-amount-large {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 5px;
+        }
+
+        .bill-change {
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .bill-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .bill-grid-item .label {
+            font-size: 0.75em;
+            opacity: 0.7;
+        }
+
+        .bill-grid-item .value {
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .bill-projection {
+            font-size: 0.75em;
+            opacity: 0.6;
+            margin-top: 15px;
+            font-style: italic;
+        }
+
+        /* No data message */
+        .no-data {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+            font-style: italic;
+        }
+
+        /* Desktop link */
+        .desktop-link {
+            text-align: center;
+            padding: 20px;
+            color: white;
+            font-size: 0.85em;
+        }
+
+        .desktop-link a {
+            color: #06b6d4;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-top">
+            <h1>⚡ Energy Tracker</h1>
+            <div class="header-widgets">
+                <div class="mini-widget">
+                    <div class="weather-display" id="weatherDisplay">
+                        <span style="opacity: 0.7;">--</span>
+                    </div>
+                </div>
+                <div class="mini-widget">
+                    <div class="value" id="countdown">--:--</div>
+                </div>
+            </div>
+        </div>
+        <div class="quick-stats">
+            <div class="stat-card">
+                <div class="label">7-Day Avg</div>
+                <div class="value" id="avgUsageMobile">--</div>
+            </div>
+            <div class="stat-card bill">
+                <div class="label">Est. Bill</div>
+                <div class="value" id="billAmountMobile">--</div>
+                <div class="sub" id="billChangeMobile"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Content: Input -->
+    <div id="tabInput" class="tab-content active">
+        <div class="input-card">
+            <h2>📊 Record Yesterday's Usage</h2>
+            
+            <div class="google-status" id="googleStatus">
+                <div class="google-status-row">
+                    <div>
+                        <div class="status-text" id="statusText">📱 Not connected</div>
+                        <div class="last-sync" id="lastSyncText"></div>
+                    </div>
+                    <div class="google-btns">
+                        <button onclick="syncData()" id="syncBtn" class="google-btn sync" style="display: none;">🔄 Sync</button>
+                        <button onclick="authorizeGoogle()" id="connectBtn" class="google-btn connect">Connect</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="past-due-alert" id="pastDueAlert">
+                ⚠️ Entry Past Due - Please log yesterday's reading
+            </div>
+
+            <div class="input-group">
+                <label for="meterReading">Current Meter Reading (kWh)</label>
+                <input type="number" id="meterReading" placeholder="e.g., 5920.5" step="0.1" inputmode="decimal">
+            </div>
+
+            <button class="btn" onclick="addReading()">Add Reading</button>
+            <button class="btn btn-secondary" onclick="resetData()">Reset Data</button>
+        </div>
+
+        <div class="desktop-link">
+            <a href="index.html">Switch to Desktop Version</a>
+        </div>
+    </div>
+
+    <!-- Tab Content: Readings -->
+    <div id="tabReadings" class="tab-content">
+        <div class="readings-list" id="readingsList">
+            <div class="no-data">No readings yet</div>
+        </div>
+    </div>
+
+    <!-- Tab Content: Chart -->
+    <div id="tabChart" class="tab-content">
+        <div class="chart-container">
+            <h3>Usage Trend</h3>
+            <div id="mobileChart"></div>
+        </div>
+
+        <div class="bill-details" id="billEstimate" style="display: none;">
+            <h3>Estimated Bill for 19 Feb</h3>
+            <div class="bill-amount-large" id="billAmount">£0.00</div>
+            <div class="bill-change" id="billChange"></div>
+            <div class="bill-grid">
+                <div class="bill-grid-item">
+                    <div class="label">Usage Cost</div>
+                    <div class="value" id="usageCost">£0.00</div>
+                </div>
+                <div class="bill-grid-item">
+                    <div class="label">Standing Charge</div>
+                    <div class="value" id="standingCost">£0.00</div>
+                </div>
+                <div class="bill-grid-item">
+                    <div class="label">Total kWh</div>
+                    <div class="value" id="totalKwh">0</div>
+                </div>
+                <div class="bill-grid-item">
+                    <div class="label">Days</div>
+                    <div class="value" id="billingDays">0</div>
+                </div>
+            </div>
+            <div class="bill-projection" id="billProjection"></div>
+        </div>
+    </div>
+
+    <!-- Bottom Tab Navigation -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('Input')">
+            <span class="icon">➕</span>
+            <span>Add</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('Readings')">
+            <span class="icon">📋</span>
+            <span>Readings</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('Chart')">
+            <span class="icon">📊</span>
+            <span>Chart</span>
+        </button>
+    </nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.1/dist/apexcharts.min.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="app.js"></script>
+    <script>
+        let mobileChart = null;
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById('tab' + tabName).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            // Render chart when switching to chart tab
+            if (tabName === 'Chart') {
+                renderMobileChart();
+            }
+        }
+
+        // Override displayHistory for mobile
+        function displayHistory() {
+            const data = loadData();
+            
+            // Update quick stats
+            updateMobileStats(data);
+            
+            // Update readings list
+            updateReadingsList(data);
+            
+            // Calculate bill
+            calculateBill();
+            
+            // Update mobile bill display
+            updateMobileBill();
+        }
+
+        function updateMobileStats(data) {
+            const usageData = data.filter(item => item.dailyUsage !== null);
+            
+            if (usageData.length > 0) {
+                const last7Days = usageData.slice(0, 7);
+                const avgUsage = last7Days.reduce((sum, item) => sum + item.dailyUsage, 0) / last7Days.length;
+                document.getElementById('avgUsageMobile').textContent = avgUsage.toFixed(1) + ' kWh';
+            }
+        }
+
+        function updateMobileBill() {
+            const billAmount = document.getElementById('billAmount');
+            const billChange = document.getElementById('billChange');
+            
+            if (billAmount) {
+                document.getElementById('billAmountMobile').textContent = billAmount.textContent;
+            }
+            
+            if (billChange && billChange.innerHTML) {
+                document.getElementById('billChangeMobile').innerHTML = billChange.innerHTML;
+            }
+        }
+
+        function updateReadingsList(data) {
+            const listElement = document.getElementById('readingsList');
+            
+            if (data.length === 0) {
+                listElement.innerHTML = '<div class="no-data">No readings yet. Add your first reading!</div>';
+                return;
+            }
+
+            let html = '';
+            
+            data.forEach(item => {
+                const date = new Date(item.date + 'T12:00:00');
+                const day = date.getDate();
+                const month = date.toLocaleDateString('en-GB', { month: 'short' });
+                const weekday = date.toLocaleDateString('en-GB', { weekday: 'short' });
+
+                if (item.dailyUsage === null) {
+                    html += `
+                        <div class="reading-item baseline-row">
+                            <div>
+                                <div class="reading-date">${day} ${month}</div>
+                                <div class="reading-day">${weekday}</div>
+                            </div>
+                            <div class="reading-usage">
+                                <div class="reading-kwh">Baseline: ${item.meterReading.toFixed(1)}</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    const status = getStatus(item.dailyUsage);
+                    const diff = (item.dailyUsage - 30).toFixed(1);
+                    const diffText = item.dailyUsage <= 30 ? diff : `+${diff}`;
+
+                    html += `
+                        <div class="reading-item">
+                            <div>
+                                <div class="reading-date">${day} ${month}</div>
+                                <div class="reading-day">${weekday}</div>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <div class="reading-usage">
+                                    <div class="reading-kwh ${status}">${item.dailyUsage.toFixed(1)} kWh</div>
+                                    <div class="reading-diff">(${diffText})</div>
+                                </div>
+                                <div class="reading-status ${status}"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            listElement.innerHTML = html;
+        }
+
+        function renderMobileChart() {
+            const data = loadData();
+            const usageData = data.filter(item => item.dailyUsage !== null);
+
+            if (usageData.length === 0) return;
+
+            const reversedData = [...usageData].reverse();
+            const labels = reversedData.map(item => {
+                const date = new Date(item.date + 'T12:00:00');
+                return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+            });
+            const usageValues = reversedData.map(item => item.dailyUsage);
+
+            if (mobileChart) {
+                mobileChart.destroy();
+            }
+
+            const options = {
+                series: [{
+                    name: 'Usage',
+                    data: usageValues
+                }],
+                chart: {
+                    type: 'area',
+                    height: 250,
+                    toolbar: { show: false },
+                    fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
+                    animations: {
+                        enabled: true,
+                        speed: 500
+                    }
+                },
+                colors: ['#0891b2'],
+                fill: {
+                    type: 'gradient',
+                    gradient: {
+                        shadeIntensity: 0.3,
+                        opacityFrom: 0.6,
+                        opacityTo: 0.1
+                    }
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: 3
+                },
+                markers: {
+                    size: 5,
+                    colors: usageValues.map(v => v <= 30 ? '#059669' : v <= 35 ? '#f59e0b' : '#dc2626'),
+                    strokeWidth: 0
+                },
+                xaxis: {
+                    categories: labels,
+                    labels: {
+                        style: { fontSize: '10px' },
+                        rotate: -45,
+                        rotateAlways: true
+                    }
+                },
+                yaxis: {
+                    min: 0,
+                    labels: {
+                        formatter: val => val.toFixed(0)
+                    }
+                },
+                grid: {
+                    borderColor: '#eee',
+                    strokeDashArray: 4
+                },
+                annotations: {
+                    yaxis: [{
+                        y: 30,
+                        borderColor: '#06b6d4',
+                        borderWidth: 2,
+                        strokeDashArray: 5,
+                        label: {
+                            text: 'Target',
+                            style: {
+                                color: '#06b6d4',
+                                background: 'transparent'
+                            }
+                        }
+                    }]
+                },
+                tooltip: {
+                    theme: 'dark',
+                    y: {
+                        formatter: val => val.toFixed(1) + ' kWh'
+                    }
+                }
+            };
+
+            mobileChart = new ApexCharts(document.getElementById('mobileChart'), options);
+            mobileChart.render();
+        }
+
+        // Simplified countdown for mobile (just minutes)
+        function updateCountdown() {
+            const countdownEl = document.getElementById('countdown');
+            if (!countdownEl) return;
+
+            const now = new Date();
+            const target = new Date();
+            target.setHours(7, 0, 0, 0);
+
+            if (now >= target) {
+                target.setDate(target.getDate() + 1);
+            }
+
+            const diff = target - now;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            countdownEl.textContent = `${hours}h ${minutes}m`;
+
+            // Past due alert
+            const currentHour = now.getHours();
+            const data = loadData();
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            const hasYesterdayEntry = data.some(item => item.date === yesterdayStr);
+
+            const pastDueAlert = document.getElementById('pastDueAlert');
+            if (pastDueAlert) {
+                if (currentHour >= 7 && !hasYesterdayEntry) {
+                    pastDueAlert.classList.add('show');
+                } else {
+                    pastDueAlert.classList.remove('show');
+                }
+            }
+        }
+
+        // Override weather display for mobile
+        async function fetchWeather() {
+            const weatherDisplay = document.getElementById('weatherDisplay');
+            if (!weatherDisplay) return;
+
+            try {
+                const params = new URLSearchParams({
+                    latitude: 51.5074,
+                    longitude: -0.1278,
+                    current: 'temperature_2m,weather_code',
+                    daily: 'temperature_2m_max,temperature_2m_min',
+                    timezone: 'Europe/London',
+                    forecast_days: 1
+                });
+
+                const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+                const data = await response.json();
+                
+                const currentTemp = Math.round(data.current.temperature_2m);
+                const weatherCode = data.current.weather_code;
+                const weather = getWeatherInfo(weatherCode);
+
+                weatherDisplay.innerHTML = `
+                    <div class="weather-current">
+                        <span>${weather.icon}</span>
+                        <span>${currentTemp}°</span>
+                    </div>
+                `;
+
+            } catch (error) {
+                weatherDisplay.innerHTML = '<span style="opacity: 0.7;">--</span>';
+            }
+        }
+    </script>
+</body>
+</html>
