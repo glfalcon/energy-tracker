@@ -767,29 +767,11 @@
                 markers: {
                     size: 8,
                     strokeWidth: 0,
-                    strokeColors: '#fff',
                     hover: { size: 10 },
                     discrete: discreteMarkers
                 },
                 dataLabels: {
-                    enabled: true,
-                    formatter: function(val) {
-                        return val.toFixed(0);
-                    },
-                    offsetY: -10,
-                    style: {
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        colors: usageValues.map(v => v <= 30 ? '#059669' : v <= 35 ? '#f59e0b' : '#dc2626')
-                    },
-                    background: {
-                        enabled: true,
-                        foreColor: '#fff',
-                        padding: 4,
-                        borderRadius: 4,
-                        borderWidth: 0,
-                        dropShadow: { enabled: false }
-                    }
+                    enabled: false
                 },
                 xaxis: {
                     categories: labels,
@@ -816,10 +798,13 @@
                         borderWidth: 2,
                         strokeDashArray: 5,
                         label: {
-                            text: 'Target',
+                            text: 'Target: 30',
+                            position: 'left',
+                            offsetX: 10,
                             style: {
-                                color: '#06b6d4',
-                                background: 'transparent'
+                                color: '#fff',
+                                background: '#06b6d4',
+                                fontSize: '10px'
                             }
                         }
                     }]
