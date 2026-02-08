@@ -520,6 +520,7 @@
                 <div class="bill-estimate" id="billEstimate" style="display: none;">
                     <h3>Estimated Bill for 19 Feb</h3>
                     <div class="bill-amount" id="billAmount">£0.00</div>
+                    <div class="bill-change" id="billChange" style="display: none; font-size: 0.9em; margin-bottom: 10px;"></div>
                     <div class="bill-breakdown">
                         <div class="bill-item">
                             <div class="bill-item-label">Usage Cost</div>
@@ -1028,6 +1029,9 @@
             const standingCost = totalBillingDays * standingCharge;
             const totalBill = usageCost + standingCost;
             
+            // Get previous estimate for comparison
+            const previousBill = parseFloat(localStorage.getItem('previousBillEstimate')) || null;
+            
             // Update UI
             billEstimateEl.style.display = 'block';
             document.getElementById('billAmount').textContent = `£${totalBill.toFixed(2)}`;
@@ -1035,6 +1039,22 @@
             document.getElementById('standingCost').textContent = `£${standingCost.toFixed(2)}`;
             document.getElementById('totalKwh').textContent = Math.round(totalProjectedKwh);
             document.getElementById('billingDays').textContent = totalBillingDays;
+            
+            // Show change indicator
+            const changeIndicator = document.getElementById('billChange');
+            if (previousBill !== null && previousBill !== totalBill) {
+                const difference = previousBill - totalBill;
+                const isLower = difference > 0;
+                const arrow = isLower ? '↓' : '↑';
+                const color = isLower ? '#059669' : '#dc2626';
+                changeIndicator.innerHTML = `<span style="color: ${color}; font-weight: 600;">${arrow} £${Math.abs(difference).toFixed(2)}</span> <span style="opacity: 0.7;">from yesterday</span>`;
+                changeIndicator.style.display = 'block';
+            } else {
+                changeIndicator.style.display = 'none';
+            }
+            
+            // Save current estimate for next comparison
+            localStorage.setItem('previousBillEstimate', totalBill.toFixed(2));
             
             // Projection note
             const projectionText = daysRemaining > 0 
