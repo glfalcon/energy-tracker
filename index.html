@@ -508,7 +508,7 @@
     <div class="container">
         <div class="header">
             <div class="header-left">
-                <h1>âš¡ Daily Energy Tracker</h1>
+                <h1>⚡ Daily Energy Tracker</h1>
                 <p>Target: 30 kWh per day</p>
             </div>
             <div class="countdown-mini">
@@ -520,17 +520,17 @@
         <div class="main-content">
             <div class="left-panel">
                 <div class="entry-card">
-                    <h2>ðŸ“Š Record Yesterday's Usage</h2>
+                    <h2>📊 Record Yesterday's Usage</h2>
                     
                     <div id="googleStatus" style="background: #f3f4f6; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85em;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span id="statusText">ðŸ“± Not connected to Google Sheets</span>
+                            <span id="statusText">📱 Not connected to Google Sheets</span>
                             <button onclick="authorizeGoogle()" id="connectBtn" style="background: #0891b2; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.85em;">Connect</button>
                         </div>
                     </div>
                     
                     <div class="past-due-alert" id="pastDueAlert">
-                        âš ï¸ Entry Past Due - Please log yesterday's reading
+                        âš ï¸ ⚠️ Entry Past Due - Please log yesterday's reading
                     </div>
                     <div class="input-group">
                         <label for="meterReading">Current Meter Reading (kWh)</label>
@@ -541,7 +541,7 @@
                 </div>
 
                 <div class="history-panel">
-                    <h2>ðŸ“ˆ Daily Readings</h2>
+                    <h2>📈 Daily Readings</h2>
                     <div id="historyList">
                         <div class="no-data">No data yet. Enter your first meter reading above!</div>
                     </div>
@@ -551,15 +551,15 @@
             <div class="right-panel">
                 <div class="bill-estimate" id="billEstimate" style="display: none;">
                     <h3>Estimated Bill for 19 Feb</h3>
-                    <div class="bill-amount" id="billAmount">Â£0.00</div>
+                    <div class="bill-amount" id="billAmount">£0.00</div>
                     <div class="bill-breakdown">
                         <div class="bill-item">
                             <div class="bill-item-label">Usage Cost</div>
-                            <div class="bill-item-value" id="usageCost">Â£0.00</div>
+                            <div class="bill-item-value" id="usageCost">£0.00</div>
                         </div>
                         <div class="bill-item">
                             <div class="bill-item-label">Standing Charge</div>
-                            <div class="bill-item-value" id="standingCost">Â£0.00</div>
+                            <div class="bill-item-value" id="standingCost">£0.00</div>
                         </div>
                         <div class="bill-item">
                             <div class="bill-item-label">Total kWh</div>
@@ -581,7 +581,7 @@
                             <div class="value" id="avgUsage">--</div>
                     </div>
                     <div class="summary-stat">
-                        <div class="label">Days Under Target</div>
+                        <div class="label">Days Under Target ✓</div>
                         <div class="value" id="daysUnder">--</div>
                     </div>
                 </div>
@@ -930,7 +930,7 @@
                                     const diff = value - 30;
                                     const status = value <= 30 ? 'âœ“ Under target' : 
                                                    value <= 35 ? 'âš  Slightly over' : 
-                                                   'âœ— Over target';
+                                                   '✗ Over target';
                                     return [
                                         `Usage: ${value.toFixed(1)} kWh`,
                                         `Diff: ${diff > 0 ? '+' : ''}${diff.toFixed(1)} kWh`,
@@ -986,8 +986,8 @@
             }
             
             // Tariff information
-            const unitRate = 0.25; // Â£0.25 per kWh
-            const standingCharge = 0.4482; // Â£0.4482 per day
+            const unitRate = 0.25; // £0.25 per kWh
+            const standingCharge = 0.4482; // £0.4482 per day
             
             // Billing period: 17 Jan to 17 Feb (32 days)
             const billingStart = new Date('2026-01-17T00:00:00');
@@ -1024,9 +1024,9 @@
             
             // Update UI
             billEstimateEl.style.display = 'block';
-            document.getElementById('billAmount').textContent = `Â£${totalBill.toFixed(2)}`;
-            document.getElementById('usageCost').textContent = `Â£${usageCost.toFixed(2)}`;
-            document.getElementById('standingCost').textContent = `Â£${standingCost.toFixed(2)}`;
+            document.getElementById('billAmount').textContent = `£${totalBill.toFixed(2)}`;
+            document.getElementById('usageCost').textContent = `£${usageCost.toFixed(2)}`;
+            document.getElementById('standingCost').textContent = `£${standingCost.toFixed(2)}`;
             document.getElementById('totalKwh').textContent = Math.round(totalProjectedKwh);
             document.getElementById('billingDays').textContent = totalBillingDays;
             
@@ -1267,7 +1267,7 @@
 
         // Get status text
         function getStatusText(usage) {
-            if (usage <= 30) return 'Under Target âœ“';
+            if (usage <= 30) return 'Under Target ✓ âœ“';
             if (usage <= 35) return 'Slightly Over';
             return 'Over Target';
         }
@@ -1371,11 +1371,11 @@
             const connectBtn = document.getElementById('connectBtn');
             
             if (GOOGLE_CONFIG.spreadsheetId && accessToken) {
-                statusText.textContent = 'âœ… Connected to Google Sheets';
+                statusText.textContent = 'âœ… ✓ Connected to Google Sheets';
                 statusText.style.color = '#059669';
                 connectBtn.style.display = 'none';
             } else {
-                statusText.textContent = 'ðŸ“± Not connected to Google Sheets';
+                            <span id="statusText">📱 Not connected to Google Sheets</span>
                 statusText.style.color = '#64748b';
                 connectBtn.style.display = 'block';
             }
