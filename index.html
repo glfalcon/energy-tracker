@@ -81,6 +81,9 @@
             border-radius: 15px;
             padding: 25px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 20px;
+            z-index: 10;
         }
 
         .entry-card h2 {
@@ -189,6 +192,10 @@
             border-radius: 15px;
             padding: 30px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
         }
 
         .right-panel h2 {
@@ -198,8 +205,14 @@
             flex-shrink: 0;
         }
 
+        .bill-estimate {
+            flex-shrink: 0;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
         .chart-section {
-            margin-top: 30px;
             flex-shrink: 0;
         }
 
@@ -207,6 +220,11 @@
             color: #0891b2;
             font-size: 1.2em;
             margin-bottom: 15px;
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 10px 0;
+            z-index: 5;
         }
 
         #chartContainer {
@@ -223,10 +241,7 @@
             color: white;
             padding: 20px;
             border-radius: 12px;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #e5e7eb;
-            flex-shrink: 0;
+            margin-bottom: 25px;
         }
 
         .bill-estimate h3 {
@@ -361,6 +376,60 @@
             background: #dc2626;
         }
 
+        .edit-btn {
+            background: #06b6d4;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .edit-btn:hover {
+            background: #0891b2;
+        }
+
+        .save-btn {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            cursor: pointer;
+            margin-right: 4px;
+            transition: background 0.2s;
+        }
+
+        .save-btn:hover {
+            background: #047857;
+        }
+
+        .cancel-btn {
+            background: #64748b;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .cancel-btn:hover {
+            background: #475569;
+        }
+
+        .editing-input {
+            width: 90px;
+            padding: 4px 8px;
+            border: 2px solid #06b6d4;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
         .first-reading-row {
             font-style: italic;
             color: #999;
@@ -403,13 +472,14 @@
                 grid-template-columns: 1fr;
             }
 
-            .entry-card {
+            .right-panel {
                 position: relative;
                 top: 0;
             }
-            
-            .history-panel {
-                max-height: 500px;
+
+            .entry-card {
+                position: relative;
+                top: 0;
             }
         }
 
@@ -438,7 +508,7 @@
     <div class="container">
         <div class="header">
             <div class="header-left">
-                <h1>⚡ Daily Energy Tracker</h1>
+                <h1>âš¡ Daily Energy Tracker</h1>
                 <p>Target: 30 kWh per day</p>
             </div>
             <div class="countdown-mini">
@@ -450,17 +520,17 @@
         <div class="main-content">
             <div class="left-panel">
                 <div class="entry-card">
-                    <h2>📊 Record Yesterday's Usage</h2>
+                    <h2>ðŸ“Š Record Yesterday's Usage</h2>
                     
                     <div id="googleStatus" style="background: #f3f4f6; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85em;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span id="statusText">📱 Not connected to Google Sheets</span>
+                            <span id="statusText">ðŸ“± Not connected to Google Sheets</span>
                             <button onclick="authorizeGoogle()" id="connectBtn" style="background: #0891b2; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.85em;">Connect</button>
                         </div>
                     </div>
                     
                     <div class="past-due-alert" id="pastDueAlert">
-                        ⚠ï¸ Entry Past Due - Please log yesterday's reading
+                        âš ï¸ Entry Past Due - Please log yesterday's reading
                     </div>
                     <div class="input-group">
                         <label for="meterReading">Current Meter Reading (kWh)</label>
@@ -471,7 +541,7 @@
                 </div>
 
                 <div class="history-panel">
-                    <h2>📈 Daily Readings</h2>
+                    <h2>ðŸ“ˆ Daily Readings</h2>
                     <div id="historyList">
                         <div class="no-data">No data yet. Enter your first meter reading above!</div>
                     </div>
@@ -481,15 +551,15 @@
             <div class="right-panel">
                 <div class="bill-estimate" id="billEstimate" style="display: none;">
                     <h3>Estimated Bill for 19 Feb</h3>
-                    <div class="bill-amount" id="billAmount">£0.00</div>
+                    <div class="bill-amount" id="billAmount">Â£0.00</div>
                     <div class="bill-breakdown">
                         <div class="bill-item">
                             <div class="bill-item-label">Usage Cost</div>
-                            <div class="bill-item-value" id="usageCost">£0.00</div>
+                            <div class="bill-item-value" id="usageCost">Â£0.00</div>
                         </div>
                         <div class="bill-item">
                             <div class="bill-item-label">Standing Charge</div>
-                            <div class="bill-item-value" id="standingCost">£0.00</div>
+                            <div class="bill-item-value" id="standingCost">Â£0.00</div>
                         </div>
                         <div class="bill-item">
                             <div class="bill-item-label">Total kWh</div>
@@ -858,9 +928,9 @@
                                     }
                                     const value = context.parsed.y;
                                     const diff = value - 30;
-                                    const status = value <= 30 ? '✓ Under target' : 
-                                                   value <= 35 ? '⚠ Slightly over' : 
-                                                   '✗ Over target';
+                                    const status = value <= 30 ? 'âœ“ Under target' : 
+                                                   value <= 35 ? 'âš  Slightly over' : 
+                                                   'âœ— Over target';
                                     return [
                                         `Usage: ${value.toFixed(1)} kWh`,
                                         `Diff: ${diff > 0 ? '+' : ''}${diff.toFixed(1)} kWh`,
@@ -916,8 +986,8 @@
             }
             
             // Tariff information
-            const unitRate = 0.25; // £0.25 per kWh
-            const standingCharge = 0.4482; // £0.4482 per day
+            const unitRate = 0.25; // Â£0.25 per kWh
+            const standingCharge = 0.4482; // Â£0.4482 per day
             
             // Billing period: 17 Jan to 17 Feb (32 days)
             const billingStart = new Date('2026-01-17T00:00:00');
@@ -954,9 +1024,9 @@
             
             // Update UI
             billEstimateEl.style.display = 'block';
-            document.getElementById('billAmount').textContent = `£${totalBill.toFixed(2)}`;
-            document.getElementById('usageCost').textContent = `£${usageCost.toFixed(2)}`;
-            document.getElementById('standingCost').textContent = `£${standingCost.toFixed(2)}`;
+            document.getElementById('billAmount').textContent = `Â£${totalBill.toFixed(2)}`;
+            document.getElementById('usageCost').textContent = `Â£${usageCost.toFixed(2)}`;
+            document.getElementById('standingCost').textContent = `Â£${standingCost.toFixed(2)}`;
             document.getElementById('totalKwh').textContent = Math.round(totalProjectedKwh);
             document.getElementById('billingDays').textContent = totalBillingDays;
             
@@ -1067,13 +1137,18 @@
             
             const data = loadData();
             const now = new Date();
-            const dateStr = now.toISOString().split('T')[0];
+            
+            // Get YESTERDAY's date (since we're recording yesterday's usage)
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const dateStr = yesterday.toISOString().split('T')[0];
+            
             const timeStr = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM in 24H format
             
-            // Check if there's already an entry for today
+            // Check if there's already an entry for yesterday
             const existingIndex = data.findIndex(item => item.date === dateStr);
             if (existingIndex !== -1) {
-                if (!confirm('You already have an entry for today. Do you want to replace it?')) {
+                if (!confirm('You already have an entry for yesterday. Do you want to replace it?')) {
                     return;
                 }
                 data.splice(existingIndex, 1);
@@ -1103,7 +1178,84 @@
             
             input.value = '';
             displayHistory();
-            updateCountdown(); // Refresh past due status
+            updateCountdown(); // Reset countdown and refresh past due status immediately
+        }
+
+        // Edit entry
+        function editEntry(date) {
+            const row = document.querySelector(`tr[data-date="${date}"]`);
+            if (!row) return;
+            
+            const data = loadData();
+            const entry = data.find(item => item.date === date);
+            if (!entry) return;
+            
+            // Store original values
+            row.dataset.originalReading = entry.meterReading;
+            
+            // Make meter reading editable
+            const meterCell = row.querySelector('.meter-col');
+            const currentReading = entry.meterReading;
+            meterCell.innerHTML = `<input type="number" class="editing-input" value="${currentReading}" step="0.1" id="edit-${date}">`;
+            
+            // Change action buttons to Save/Cancel
+            const actionCell = row.querySelector('.action-col');
+            actionCell.innerHTML = `
+                <button class="save-btn" onclick="saveEdit('${date}')">Save</button>
+                <button class="cancel-btn" onclick="cancelEdit('${date}')">Cancel</button>
+            `;
+            
+            // Focus the input
+            document.getElementById(`edit-${date}`).focus();
+        }
+
+        // Save edited entry
+        function saveEdit(date) {
+            const input = document.getElementById(`edit-${date}`);
+            const newReading = parseFloat(input.value);
+            
+            if (isNaN(newReading) || newReading < 0) {
+                alert('Please enter a valid meter reading');
+                return;
+            }
+            
+            const data = loadData();
+            const entryIndex = data.findIndex(item => item.date === date);
+            if (entryIndex === -1) return;
+            
+            // Update the meter reading
+            data[entryIndex].meterReading = newReading;
+            
+            // Recalculate daily usage for this entry and the next one
+            // Current entry's usage = current reading - previous reading
+            if (entryIndex < data.length - 1) {
+                const prevReading = data[entryIndex + 1].meterReading;
+                data[entryIndex].dailyUsage = newReading - prevReading;
+                
+                if (data[entryIndex].dailyUsage < 0) {
+                    alert('New reading is less than the previous reading. Please check your input.');
+                    return;
+                }
+            }
+            
+            // Next entry's usage needs to be recalculated if this isn't the newest entry
+            if (entryIndex > 0) {
+                const nextEntry = data[entryIndex - 1];
+                nextEntry.dailyUsage = nextEntry.meterReading - newReading;
+                
+                if (nextEntry.dailyUsage < 0) {
+                    alert('This change would make the next day\'s usage negative. Please check your input.');
+                    return;
+                }
+            }
+            
+            saveData(data);
+            displayHistory();
+        }
+
+        // Cancel edit
+        function cancelEdit(date) {
+            displayHistory(); // Just refresh to restore original state
         }
 
         // Get status based on usage
@@ -1115,7 +1267,7 @@
 
         // Get status text
         function getStatusText(usage) {
-            if (usage <= 30) return 'Under Target ✓';
+            if (usage <= 30) return 'Under Target âœ“';
             if (usage <= 35) return 'Slightly Over';
             return 'Over Target';
         }
@@ -1158,6 +1310,7 @@
                             <th>Meter Reading</th>
                             <th>Time</th>
                             <th class="status-col">Status</th>
+                            <th class="status-col">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1187,12 +1340,13 @@
                     const diffText = item.dailyUsage <= 30 ? diff : `+${diff}`;
                     
                     html += `
-                        <tr>
+                        <tr data-date="${item.date}">
                             <td class="date-col">${dateFormatted}</td>
                             <td class="usage-col ${status}">${item.dailyUsage.toFixed(1)} kWh <span style="font-size: 0.85em; font-weight: normal;">(${diffText})</span></td>
                             <td class="meter-col">${item.meterReading.toFixed(1)} kWh</td>
                             <td class="meter-col">${entryTime}</td>
                             <td class="status-col"><span class="status-indicator ${status}"></span></td>
+                            <td class="status-col action-col"><button class="edit-btn" onclick="editEntry('${item.date}')">Edit</button></td>
                         </tr>
                     `;
                 }
@@ -1217,11 +1371,11 @@
             const connectBtn = document.getElementById('connectBtn');
             
             if (GOOGLE_CONFIG.spreadsheetId && accessToken) {
-                statusText.textContent = '✅ Connected to Google Sheets';
+                statusText.textContent = 'âœ… Connected to Google Sheets';
                 statusText.style.color = '#059669';
                 connectBtn.style.display = 'none';
             } else {
-                statusText.textContent = '📱 Not connected to Google Sheets';
+                statusText.textContent = 'ðŸ“± Not connected to Google Sheets';
                 statusText.style.color = '#64748b';
                 connectBtn.style.display = 'block';
             }
