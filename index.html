@@ -815,11 +815,24 @@
             // Find the index of the solar panel activation date (6 Feb 2026)
             const solarStartIndex = reversedData.findIndex(item => item.date === '2026-02-06');
 
-            // Create point colors based on thresholds
-            const pointColors = usageValues.map(usage => {
-                if (usage <= 30) return '#059669';
-                if (usage <= 35) return '#f59e0b';
-                return '#dc2626';
+            // Create discrete markers for each point with correct colors
+            const discreteMarkers = usageValues.map((usage, index) => {
+                let color;
+                if (usage <= 30) {
+                    color = '#059669'; // green - under target
+                } else if (usage <= 35) {
+                    color = '#f59e0b'; // amber - slightly over
+                } else {
+                    color = '#dc2626'; // red - over target
+                }
+
+                return {
+                    seriesIndex: 0,
+                    dataPointIndex: index,
+                    fillColor: color,
+                    strokeColor: color,
+                    size: 6
+                };
             });
 
             // Destroy existing chart if it exists
@@ -890,19 +903,11 @@
                 },
                 markers: {
                     size: [6, 0],
-                    colors: pointColors,
-                    strokeColors: pointColors,
                     strokeWidth: 2,
                     hover: {
                         size: 8
                     },
-                    discrete: solarStartIndex !== -1 ? [{
-                        seriesIndex: 0,
-                        dataPointIndex: solarStartIndex,
-                        fillColor: '#f59e0b',
-                        strokeColor: '#f59e0b',
-                        size: 8
-                    }] : []
+                    discrete: discreteMarkers
                 },
                 xaxis: {
                     categories: labels,
