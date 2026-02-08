@@ -924,13 +924,16 @@
                     return false;
                 }
 
-                // Convert rows to data objects (reverse so newest is first for display)
+                // Convert rows to data objects
                 const data = rows.map(row => ({
                     date: row[0],
                     meterReading: parseFloat(row[1]),
                     dailyUsage: row[2] ? parseFloat(row[2]) : null,
                     entryTime: row[3] || null
-                })).reverse();
+                }));
+
+                // Sort by date descending (newest first) - ensures consistent order regardless of Google Sheets order
+                data.sort((a, b) => new Date(b.date) - new Date(a.date));
 
                 // Save to localStorage as cache AND save sync timestamp
                 localStorage.setItem('energyData', JSON.stringify(data));
