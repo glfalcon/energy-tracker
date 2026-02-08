@@ -717,6 +717,25 @@
                 mobileChart.destroy();
             }
 
+            // Create discrete markers for each point with correct colors
+            const discreteMarkers = usageValues.map((usage, index) => {
+                let color;
+                if (usage <= 30) {
+                    color = '#059669'; // green
+                } else if (usage <= 35) {
+                    color = '#f59e0b'; // amber
+                } else {
+                    color = '#dc2626'; // red
+                }
+                return {
+                    seriesIndex: 0,
+                    dataPointIndex: index,
+                    fillColor: color,
+                    strokeColor: color,
+                    size: 6
+                };
+            });
+
             const options = {
                 series: [{
                     name: 'Usage',
@@ -746,9 +765,10 @@
                     width: 3
                 },
                 markers: {
-                    size: 5,
-                    colors: usageValues.map(v => v <= 30 ? '#059669' : v <= 35 ? '#f59e0b' : '#dc2626'),
-                    strokeWidth: 0
+                    size: 6,
+                    strokeWidth: 2,
+                    hover: { size: 8 },
+                    discrete: discreteMarkers
                 },
                 xaxis: {
                     categories: labels,
