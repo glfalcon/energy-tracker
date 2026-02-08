@@ -1371,11 +1371,11 @@
             const connectBtn = document.getElementById('connectBtn');
             
             if (GOOGLE_CONFIG.spreadsheetId && accessToken) {
-                statusText.textContent = 'âœ… ✓ Connected to Google Sheets';
+                statusText.textContent = '✓ Connected to Google Sheets';
                 statusText.style.color = '#059669';
                 connectBtn.style.display = 'none';
             } else {
-                            <span id="statusText">📱 Not connected to Google Sheets</span>
+                statusText.textContent = '📱 Not connected to Google Sheets';
                 statusText.style.color = '#64748b';
                 connectBtn.style.display = 'block';
             }
