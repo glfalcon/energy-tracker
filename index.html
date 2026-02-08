@@ -460,7 +460,7 @@
             .header-left h1 {
                 font-size: 2em;
             }
-            
+
             .countdown-display {
                 font-size: 1.2em;
             }
@@ -489,14 +489,14 @@
             <div class="left-panel">
                 <div class="entry-card">
                     <h2>📊 Record Yesterday's Usage</h2>
-                    
+
                     <div id="googleStatus" style="background: #f3f4f6; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85em;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span id="statusText">📱 Not connected to Google Sheets</span>
                             <button onclick="authorizeGoogle()" id="connectBtn" style="background: #0891b2; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.85em;">Connect</button>
                         </div>
                     </div>
-                    
+
                     <div class="past-due-alert" id="pastDueAlert">
                         ⚠️ Entry Past Due - Please log yesterday's reading
                     </div>
@@ -541,7 +541,7 @@
                     </div>
                     <div class="bill-projection" id="billProjection"></div>
                 </div>
-                
+
                 <div class="chart-section">
                     <h3>Usage Chart</h3>
                     <div id="summary" class="summary" style="display: none;">
@@ -555,19 +555,19 @@
                     </div>
                 </div>
                 <div id="chartContainer" style="display: none;">
-                    <canvas id="usageChart"></canvas>
+                    <div id="usageChart"></div>
                 </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.1/dist/apexcharts.min.js"></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
         let usageChart = null;
-        
+
         // Google Sheets configuration
         const GOOGLE_CONFIG = {
             clientId: '531203228430-94fbaf0bc30tkp211gvac6ihbk4cc1do.apps.googleusercontent.com',
@@ -621,7 +621,7 @@
                 // Spreadsheet ID is hard-coded
                 // Check if we have a saved access token
                 const savedToken = localStorage.getItem('energyTrackerAccessToken');
-                
+
                 if (savedToken) {
                     try {
                         accessToken = JSON.parse(savedToken);
@@ -632,7 +632,7 @@
                         accessToken = null;
                     }
                 }
-                
+
                 loadDataFromSource();
                 updateGoogleStatus();
             }
@@ -645,12 +645,12 @@
                     throw (resp);
                 }
                 accessToken = gapi.client.getToken();
-                
+
                 // Save access token to localStorage
                 localStorage.setItem('energyTrackerAccessToken', JSON.stringify(accessToken));
-                
+
                 // Spreadsheet ID is hard-coded, never create a new one
-                
+
                 // Load data from sheets
                 await syncFromSheets();
                 updateGoogleStatus();
@@ -679,10 +679,10 @@
                         }
                     }]
                 });
-                
+
                 GOOGLE_CONFIG.spreadsheetId = response.result.spreadsheetId;
                 localStorage.setItem('energyTrackerSpreadsheetId', GOOGLE_CONFIG.spreadsheetId);
-                
+
                 // Add headers
                 await gapi.client.sheets.spreadsheets.values.update({
                     spreadsheetId: GOOGLE_CONFIG.spreadsheetId,
@@ -692,10 +692,10 @@
                         values: [['Date', 'Meter Reading', 'Daily Usage', 'Entry Time']]
                     }
                 });
-                
+
                 console.log('Created spreadsheet:', response.result.spreadsheetUrl);
                 alert('Google Sheet created! View it at: ' + response.result.spreadsheetUrl);
-                
+
             } catch (err) {
                 console.error('Error creating spreadsheet:', err);
                 alert('Error creating Google Sheet. Please try again.');
@@ -767,7 +767,7 @@
                 // Save to localStorage as cache
                 localStorage.setItem('energyData', JSON.stringify(data));
                 displayHistory();
-                
+
                 return true;
             } catch (err) {
                 console.error('Error syncing from sheets:', err);
@@ -784,7 +784,7 @@
                     return;
                 }
             }
-            
+
             // Fall back to localStorage
             displayHistory();
         }
@@ -793,18 +793,17 @@
         function renderChart() {
             const data = loadData();
             const chartContainer = document.getElementById('chartContainer');
-            const canvas = document.getElementById('usageChart');
-            
+
             // Only show chart if we have usage data (not just meter readings)
             const usageData = data.filter(item => item.dailyUsage !== null);
-            
+
             if (usageData.length === 0) {
                 chartContainer.style.display = 'none';
                 return;
             }
-            
+
             chartContainer.style.display = 'block';
-            
+
             // Prepare data (data is already newest first, reverse it for chart to show oldest→newest left→right)
             const reversedData = [...usageData].reverse();
             const labels = reversedData.map(item => {
@@ -812,226 +811,254 @@
                 return date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
             });
             const usageValues = reversedData.map(item => item.dailyUsage);
-            
+
             // Find the index of the solar panel activation date (6 Feb 2026)
             const solarStartIndex = reversedData.findIndex(item => item.date === '2026-02-06');
-            
-            // Create background colors based on thresholds
-            const backgroundColors = usageValues.map(usage => {
-                if (usage <= 30) return 'rgba(5, 150, 105, 0.6)';
-                if (usage <= 35) return 'rgba(245, 158, 11, 0.6)';
-                return 'rgba(220, 38, 38, 0.6)';
+
+            // Create point colors based on thresholds
+            const pointColors = usageValues.map(usage => {
+                if (usage <= 30) return '#059669';
+                if (usage <= 35) return '#f59e0b';
+                return '#dc2626';
             });
-            
-            const borderColors = usageValues.map(usage => {
-                if (usage <= 30) return 'rgba(5, 150, 105, 1)';
-                if (usage <= 35) return 'rgba(245, 158, 11, 1)';
-                return 'rgba(220, 38, 38, 1)';
-            });
-            
+
             // Destroy existing chart if it exists
             if (usageChart) {
                 usageChart.destroy();
             }
-            
-            // Create new chart
-            const ctx = canvas.getContext('2d');
-            usageChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Daily Usage (kWh)',
-                            data: usageValues,
-                            borderColor: '#0891b2',
-                            backgroundColor: 'rgba(8, 145, 178, 0.1)',
-                            borderWidth: 3,
-                            pointBackgroundColor: borderColors,
-                            pointBorderColor: borderColors,
-                            pointRadius: 6,
-                            pointHoverRadius: 8,
-                            tension: 0.3,
-                            fill: true
-                        },
-                        {
-                            label: 'Target (30 kWh)',
-                            data: new Array(usageValues.length).fill(30),
-                            borderColor: '#06b6d4',
-                            borderWidth: 3,
-                            borderDash: [10, 5],
-                            pointRadius: 0,
-                            fill: false,
-                            tension: 0
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    aspectRatio: 2,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                font: {
-                                    size: 12,
-                                    weight: 'bold'
-                                },
-                                padding: 15,
-                                usePointStyle: true
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            padding: 12,
-                            titleFont: {
-                                size: 14,
-                                weight: 'bold'
-                            },
-                            bodyFont: {
-                                size: 13
-                            },
-                            callbacks: {
-                                label: function(context) {
-                                    if (context.dataset.label === 'Target (30 kWh)') {
-                                        return 'Target: 30 kWh';
-                                    }
-                                    const value = context.parsed.y;
-                                    const diff = value - 30;
-                                    const status = value <= 30 ? '✓ Under target' : 
-                                                   value <= 35 ? '⚠ Slightly over' : 
-                                                   '✗ Over target';
-                                    const isSolarDay = context.dataIndex >= solarStartIndex && solarStartIndex !== -1;
-                                    const result = [
-                                        `Usage: ${value.toFixed(1)} kWh`,
-                                        `Diff: ${diff > 0 ? '+' : ''}${diff.toFixed(1)} kWh`,
-                                        status
-                                    ];
-                                    if (isSolarDay) {
-                                        result.push('☀️ Solar active');
-                                    }
-                                    return result;
-                                }
-                            }
+
+            // Create ApexCharts configuration
+            const options = {
+                series: [
+                    {
+                        name: 'Daily Usage',
+                        type: 'area',
+                        data: usageValues
+                    },
+                    {
+                        name: 'Target',
+                        type: 'line',
+                        data: new Array(usageValues.length).fill(30)
+                    }
+                ],
+                chart: {
+                    height: 350,
+                    type: 'line',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    toolbar: {
+                        show: true,
+                        tools: {
+                            download: true,
+                            selection: false,
+                            zoom: true,
+                            zoomin: true,
+                            zoomout: true,
+                            pan: false,
+                            reset: true
                         }
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'kWh',
-                                font: {
-                                    size: 14,
-                                    weight: 'bold'
-                                }
-                            },
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            },
-                            ticks: {
-                                font: {
-                                    size: 12
-                                }
-                            }
+                    animations: {
+                        enabled: true,
+                        easing: 'easeinout',
+                        speed: 800
+                    },
+                    dropShadow: {
+                        enabled: true,
+                        color: '#0891b2',
+                        top: 12,
+                        left: 0,
+                        blur: 3,
+                        opacity: 0.2
+                    }
+                },
+                colors: ['#0891b2', '#06b6d4'],
+                fill: {
+                    type: ['gradient', 'solid'],
+                    gradient: {
+                        shade: 'light',
+                        type: 'vertical',
+                        shadeIntensity: 0.3,
+                        opacityFrom: 0.5,
+                        opacityTo: 0.1,
+                        stops: [0, 90, 100]
+                    }
+                },
+                stroke: {
+                    width: [3, 3],
+                    curve: 'smooth',
+                    dashArray: [0, 8]
+                },
+                markers: {
+                    size: [6, 0],
+                    colors: pointColors,
+                    strokeColors: pointColors,
+                    strokeWidth: 2,
+                    hover: {
+                        size: 8
+                    },
+                    discrete: solarStartIndex !== -1 ? [{
+                        seriesIndex: 0,
+                        dataPointIndex: solarStartIndex,
+                        fillColor: '#f59e0b',
+                        strokeColor: '#f59e0b',
+                        size: 8
+                    }] : []
+                },
+                xaxis: {
+                    categories: labels,
+                    labels: {
+                        style: {
+                            fontSize: '11px',
+                            fontWeight: 500
+                        }
+                    },
+                    axisBorder: {
+                        show: false
+                    },
+                    axisTicks: {
+                        show: false
+                    }
+                },
+                yaxis: {
+                    min: 0,
+                    title: {
+                        text: 'kWh',
+                        style: {
+                            fontSize: '13px',
+                            fontWeight: 600
+                        }
+                    },
+                    labels: {
+                        style: {
+                            fontSize: '12px'
                         },
-                        x: {
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                font: {
-                                    size: 11
-                                }
-                            }
+                        formatter: function(val) {
+                            return val.toFixed(0);
                         }
                     }
                 },
-                plugins: [{
-                    id: 'solarAnnotation',
-                    afterDraw: function(chart) {
-                        if (solarStartIndex === -1) return;
-                        
-                        const ctx = chart.ctx;
-                        const xAxis = chart.scales.x;
-                        const yAxis = chart.scales.y;
-                        
-                        const x = xAxis.getPixelForValue(solarStartIndex);
-                        const yTop = yAxis.top;
-                        const yBottom = yAxis.bottom;
-                        
-                        // Draw vertical dashed line
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.setLineDash([5, 5]);
-                        ctx.strokeStyle = '#f59e0b';
-                        ctx.lineWidth = 2;
-                        ctx.moveTo(x, yTop);
-                        ctx.lineTo(x, yBottom);
-                        ctx.stroke();
-                        
-                        // Draw sun emoji at top
-                        ctx.font = 'bold 20px sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('☀️', x, yTop - 5);
-                        ctx.restore();
+                grid: {
+                    borderColor: '#e5e7eb',
+                    strokeDashArray: 4,
+                    xaxis: {
+                        lines: {
+                            show: false
+                        }
                     }
-                }]
-            });
+                },
+                legend: {
+                    position: 'top',
+                    horizontalAlign: 'center',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    markers: {
+                        width: 12,
+                        height: 12,
+                        radius: 2
+                    },
+                    itemMargin: {
+                        horizontal: 15
+                    }
+                },
+                tooltip: {
+                    shared: true,
+                    intersect: false,
+                    theme: 'dark',
+                    style: {
+                        fontSize: '13px'
+                    },
+                    y: {
+                        formatter: function(value, { seriesIndex, dataPointIndex }) {
+                            if (seriesIndex === 1) {
+                                return '30 kWh (target)';
+                            }
+                            const diff = value - 30;
+                            const status = value <= 30 ? '✓ Under' : value <= 35 ? '⚠ Slightly over' : '✗ Over';
+                            const isSolar = solarStartIndex !== -1 && dataPointIndex >= solarStartIndex;
+                            let text = `${value.toFixed(1)} kWh (${diff > 0 ? '+' : ''}${diff.toFixed(1)}) ${status}`;
+                            if (isSolar) {
+                                text += ' ☀️';
+                            }
+                            return text;
+                        }
+                    }
+                },
+                annotations: solarStartIndex !== -1 ? {
+                    xaxis: [{
+                        x: labels[solarStartIndex],
+                        borderColor: '#f59e0b',
+                        borderWidth: 2,
+                        strokeDashArray: 5,
+                        label: {
+                            borderColor: '#f59e0b',
+                            style: {
+                                color: '#fff',
+                                background: '#f59e0b',
+                                fontSize: '11px',
+                                fontWeight: 600
+                            },
+                            text: '☀️ Solar Active',
+                            position: 'top'
+                        }
+                    }]
+                } : {}
+            };
+
+            // Create new chart
+            usageChart = new ApexCharts(document.querySelector("#usageChart"), options);
+            usageChart.render();
         }
 
         // Calculate and display bill estimate
         function calculateBill() {
             const data = loadData();
             const billEstimateEl = document.getElementById('billEstimate');
-            
+
             if (data.length === 0) {
                 billEstimateEl.style.display = 'none';
                 return;
             }
-            
+
             // Tariff information
             const unitRate = 0.25; // £0.25 per kWh
             const standingCharge = 0.4482; // £0.4482 per day
-            
+
             // Billing period: 17 Jan to 17 Feb (32 days)
             const billingStart = new Date('2026-01-17T00:00:00');
             const billingEnd = new Date('2026-02-17T23:59:59');
             const totalBillingDays = 32;
-            
+
             // Filter data within billing period
             const billingData = data.filter(item => {
                 const itemDate = new Date(item.date + 'T12:00:00');
                 return itemDate >= billingStart && itemDate <= billingEnd && item.dailyUsage !== null;
             });
-            
+
             if (billingData.length === 0) {
                 billEstimateEl.style.display = 'none';
                 return;
             }
-            
+
             // Calculate actual usage so far
             const actualKwh = billingData.reduce((sum, item) => sum + item.dailyUsage, 0);
             const daysRecorded = billingData.length;
             const daysRemaining = totalBillingDays - daysRecorded;
-            
+
             // Calculate average daily usage for projection
             const avgDailyUsage = actualKwh / daysRecorded;
-            
+
             // Project remaining usage
             const projectedRemainingKwh = avgDailyUsage * daysRemaining;
             const totalProjectedKwh = actualKwh + projectedRemainingKwh;
-            
+
             // Calculate costs
             const usageCost = totalProjectedKwh * unitRate;
             const standingCost = totalBillingDays * standingCharge;
             const totalBill = usageCost + standingCost;
-            
+
             // Get previous estimate for comparison
             const previousBill = parseFloat(localStorage.getItem('previousBillEstimate')) || null;
-            
+
             // Update UI
             billEstimateEl.style.display = 'block';
             document.getElementById('billAmount').textContent = `£${totalBill.toFixed(2)}`;
@@ -1039,28 +1066,36 @@
             document.getElementById('standingCost').textContent = `£${standingCost.toFixed(2)}`;
             document.getElementById('totalKwh').textContent = Math.round(totalProjectedKwh);
             document.getElementById('billingDays').textContent = totalBillingDays;
-            
+
             // Show change indicator
             const changeIndicator = document.getElementById('billChange');
-            if (previousBill !== null && previousBill !== totalBill) {
+            if (previousBill !== null) {
                 const difference = previousBill - totalBill;
-                const isLower = difference > 0;
-                const arrow = isLower ? '↓' : '↑';
-                const color = isLower ? '#059669' : '#dc2626';
-                changeIndicator.innerHTML = `<span style="color: ${color}; font-weight: 600;">${arrow} £${Math.abs(difference).toFixed(2)}</span> <span style="opacity: 0.7;">from yesterday</span>`;
-                changeIndicator.style.display = 'block';
+                const absDiff = Math.abs(difference);
+
+                if (absDiff < 0.01) {
+                    // No change - neutral gray
+                    changeIndicator.innerHTML = `<span style="color: #94a3b8; font-weight: 600;">— £0.00</span> <span style="opacity: 0.7;">no change</span>`;
+                    changeIndicator.style.display = 'block';
+                } else {
+                    const isLower = difference > 0;
+                    const arrow = isLower ? '↓' : '↑';
+                    const color = isLower ? '#059669' : '#dc2626';
+                    changeIndicator.innerHTML = `<span style="color: ${color}; font-weight: 600;">${arrow} £${absDiff.toFixed(2)}</span> <span style="opacity: 0.7;">from yesterday</span>`;
+                    changeIndicator.style.display = 'block';
+                }
             } else {
                 changeIndicator.style.display = 'none';
             }
-            
+
             // Save current estimate for next comparison
             localStorage.setItem('previousBillEstimate', totalBill.toFixed(2));
-            
+
             // Projection note
-            const projectionText = daysRemaining > 0 
+            const projectionText = daysRemaining > 0
                 ? `Based on ${daysRecorded} days recorded (${actualKwh.toFixed(0)} kWh) + ${daysRemaining} days projected (${projectedRemainingKwh.toFixed(0)} kWh at ${avgDailyUsage.toFixed(1)} kWh/day avg)`
                 : `Based on complete billing period (${daysRecorded} days)`;
-            
+
             document.getElementById('billProjection').textContent = projectionText;
         }
 
@@ -1068,7 +1103,7 @@
         function loadData() {
             // Check if we need to initialize with historical data
             const initialized = localStorage.getItem('energyDataInitialized');
-            
+
             if (!initialized) {
                 // First time loading - pre-populate with historical data
                 const historicalData = [
@@ -1083,12 +1118,12 @@
                     { date: '2026-01-29', meterReading: 5577, dailyUsage: 46, entryTime: '07:25' },
                     { date: '2026-01-28', meterReading: 5531, dailyUsage: null, entryTime: '07:00' }
                 ];
-                
+
                 localStorage.setItem('energyData', JSON.stringify(historicalData));
                 localStorage.setItem('energyDataInitialized', 'true');
                 return historicalData;
             }
-            
+
             const data = localStorage.getItem('energyData');
             return data ? JSON.parse(data) : [];
         }
@@ -1096,7 +1131,7 @@
         // Save data to localStorage and Google Sheets
         function saveData(data) {
             localStorage.setItem('energyData', JSON.stringify(data));
-            
+
             // Sync to Google Sheets if available
             if (GOOGLE_CONFIG.spreadsheetId && accessToken) {
                 syncToSheets(data);
@@ -1117,32 +1152,32 @@
             const now = new Date();
             const target = new Date();
             target.setHours(7, 0, 0, 0);
-            
+
             // If it's already past 7 AM today, set target to tomorrow
             if (now >= target) {
                 target.setDate(target.getDate() + 1);
             }
-            
+
             const diff = target - now;
-            
+
             const hours = Math.floor(diff / (1000 * 60 * 60));
             const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-            
-            document.getElementById('countdown').textContent = 
+
+            document.getElementById('countdown').textContent =
                 `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            
+
             // Check if past due (after 7 AM and missing YESTERDAY'S entry)
             const currentHour = now.getHours();
             const data = loadData();
-            
+
             // Get yesterday's date
             const yesterday = new Date(now);
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
-            
+
             const hasYesterdayEntry = data.some(item => item.date === yesterdayStr);
-            
+
             const pastDueAlert = document.getElementById('pastDueAlert');
             if (currentHour >= 7 && !hasYesterdayEntry) {
                 pastDueAlert.classList.add('show');
@@ -1155,17 +1190,17 @@
         function addReading() {
             const input = document.getElementById('meterReading');
             const reading = parseFloat(input.value);
-            
+
             if (isNaN(reading) || reading < 0) {
                 alert('Please enter a valid meter reading');
                 return;
             }
-            
+
             const data = loadData();
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
             const timeStr = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM in 24H format
-            
+
             // Check if there's already an entry for today
             const existingIndex = data.findIndex(item => item.date === dateStr);
             if (existingIndex !== -1) {
@@ -1174,29 +1209,29 @@
                 }
                 data.splice(existingIndex, 1);
             }
-            
+
             let dailyUsage = null;
             if (data.length > 0) {
                 // Calculate daily usage from difference
                 const lastReading = data[0].meterReading;
                 dailyUsage = reading - lastReading;
-                
+
                 if (dailyUsage < 0) {
                     alert('Current reading is less than the previous reading. Please check your input.');
                     return;
                 }
             }
-            
+
             const entry = {
                 date: dateStr,
                 meterReading: reading,
                 dailyUsage: dailyUsage,
                 entryTime: timeStr
             };
-            
+
             data.unshift(entry);
             saveData(data);
-            
+
             input.value = '';
             displayHistory();
             updateCountdown(); // Refresh past due status
@@ -1221,29 +1256,29 @@
             const data = loadData();
             const listElement = document.getElementById('historyList');
             const summaryElement = document.getElementById('summary');
-            
+
             if (data.length === 0) {
                 listElement.innerHTML = '<div class="no-data">No data yet. Enter your first meter reading above!</div>';
                 summaryElement.style.display = 'none';
                 return;
             }
-            
+
             // Render the chart and bill estimate
             renderChart();
             calculateBill();
-            
+
             // Calculate summary stats
             const usageData = data.filter(item => item.dailyUsage !== null);
             if (usageData.length > 0) {
                 const last7Days = usageData.slice(0, 7);
                 const avgUsage = last7Days.reduce((sum, item) => sum + item.dailyUsage, 0) / last7Days.length;
                 const daysUnder = last7Days.filter(item => item.dailyUsage <= 30).length;
-                
+
                 document.getElementById('avgUsage').textContent = avgUsage.toFixed(1) + ' kWh';
                 document.getElementById('daysUnder').textContent = `${daysUnder}/${last7Days.length}`;
                 summaryElement.style.display = 'block';
             }
-            
+
             // Build table
             let html = `
                 <table class="history-table">
@@ -1258,16 +1293,16 @@
                     </thead>
                     <tbody>
             `;
-            
+
             data.forEach(item => {
                 const date = new Date(item.date + 'T12:00:00');
                 const day = String(date.getDate()).padStart(2, '0');
                 const month = date.toLocaleDateString('en-GB', { month: 'short' });
                 const weekday = date.toLocaleDateString('en-GB', { weekday: 'short' });
                 const dateFormatted = `${weekday} ${day} ${month}`;
-                
+
                 const entryTime = item.entryTime || '--:--';
-                
+
                 if (item.dailyUsage === null) {
                     html += `
                         <tr class="first-reading-row">
@@ -1281,7 +1316,7 @@
                     const status = getStatus(item.dailyUsage);
                     const diff = (item.dailyUsage - 30).toFixed(1);
                     const diffText = item.dailyUsage <= 30 ? diff : `+${diff}`;
-                    
+
                     html += `
                         <tr>
                             <td class="date-col">${dateFormatted}</td>
@@ -1293,12 +1328,12 @@
                     `;
                 }
             });
-            
+
             html += `
                     </tbody>
                 </table>
             `;
-            
+
             listElement.innerHTML = html;
         }
 
@@ -1306,12 +1341,12 @@
         updateCountdown();
         setInterval(updateCountdown, 1000);
         displayHistory();
-        
+
         // Update Google Sheets connection status
         function updateGoogleStatus() {
             const statusText = document.getElementById('statusText');
             const connectBtn = document.getElementById('connectBtn');
-            
+
             if (GOOGLE_CONFIG.spreadsheetId && accessToken) {
                 statusText.textContent = '✅ Connected to Google Sheets';
                 statusText.style.color = '#059669';
@@ -1322,7 +1357,7 @@
                 connectBtn.style.display = 'block';
             }
         }
-        
+
         setInterval(updateGoogleStatus, 1000);
     </script>
 </body>
