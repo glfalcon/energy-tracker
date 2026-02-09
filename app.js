@@ -348,12 +348,16 @@ function addReading() {
 
     const data = loadData();
     const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
+    
+    // Use YESTERDAY's date since we're recording yesterday's usage
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const dateStr = yesterday.toISOString().split('T')[0];
     const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
 
     const existingIndex = data.findIndex(item => item.date === dateStr);
     if (existingIndex !== -1) {
-        if (!confirm('You already have an entry for today. Do you want to replace it?')) {
+        if (!confirm('You already have an entry for yesterday. Do you want to replace it?')) {
             return;
         }
         data.splice(existingIndex, 1);
@@ -443,13 +447,13 @@ function calculateBill() {
     const previousBill = parseFloat(localStorage.getItem('previousBillEstimate')) || null;
 
     billEstimateEl.style.display = 'block';
-    
+
     const billAmountEl = document.getElementById('billAmount');
     const usageCostEl = document.getElementById('usageCost');
     const standingCostEl = document.getElementById('standingCost');
     const totalKwhEl = document.getElementById('totalKwh');
     const billingDaysEl = document.getElementById('billingDays');
-    
+
     if (billAmountEl) billAmountEl.textContent = `£${totalBill.toFixed(2)}`;
     if (usageCostEl) usageCostEl.textContent = `£${usageCost.toFixed(2)}`;
     if (standingCostEl) standingCostEl.textContent = `£${standingCost.toFixed(2)}`;
@@ -711,7 +715,7 @@ function displayHistory() {
     const data = loadData();
     const listElement = document.getElementById('historyList');
     const summaryElement = document.getElementById('summary');
-    
+
     if (!listElement) return;
 
     if (data.length === 0) {
@@ -731,7 +735,7 @@ function displayHistory() {
 
         const avgUsageEl = document.getElementById('avgUsage');
         const daysUnderEl = document.getElementById('daysUnder');
-        
+
         if (avgUsageEl) avgUsageEl.textContent = avgUsage.toFixed(1) + ' kWh';
         if (daysUnderEl) daysUnderEl.textContent = `${daysUnder}/${last7Days.length}`;
         summaryElement.style.display = 'block';
@@ -846,7 +850,7 @@ function updateGoogleStatus() {
 async function syncData() {
     const syncBtn = document.getElementById('syncBtn');
     if (!syncBtn) return;
-    
+
     const originalText = syncBtn.textContent;
 
     syncBtn.textContent = '⏳ Syncing...';
