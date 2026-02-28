@@ -54,6 +54,38 @@ function getWeatherInfo(code) {
     return weatherCodes[code] || { icon: '🌡️', desc: 'Unknown' };
 }
 
+// Fetch historical weather for a specific date (for storing with readings)
+async function fetchWeatherForDate(dateStr) {
+    try {
+        const params = new URLSearchParams({
+            latitude: WEATHER_CONFIG.latitude,
+            longitude: WEATHER_CONFIG.longitude,
+            daily: 'temperature_2m_max,temperature_2m_min,weather_code',
+            timezone: 'Europe/London',
+            start_date: dateStr,
+            end_date: dateStr
+        });
+
+        const response = await fetch(`${WEATHER_CONFIG.url}?${params}`);
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        if (!data.daily || !data.daily.temperature_2m_max) return null;
+
+        const weatherCode = data.daily.weather_code[0];
+        const weather = getWeatherInfo(weatherCode);
+
+        return {
+            high: Math.round(data.daily.temperature_2m_max[0]),
+            low: Math.round(data.daily.temperature_2m_min[0]),
+            condition: `${weather.icon} ${weather.desc}`
+        };
+    } catch (error) {
+        console.error('Error fetching weather for date:', error);
+        return null;
+    }
+}
+
 // Fetch current weather from Open-Meteo
 async function fetchWeather() {
     const weatherDisplay = document.getElementById('weatherDisplay');
@@ -168,12 +200,25 @@ async function syncToSheets(data) {
             item.date,
             item.meterReading,
             item.dailyUsage || '',
-            item.entryTime || ''
+            item.entryTime || '',
+            item.weatherHigh != null ? item.weatherHigh : '',
+            item.weatherLow != null ? item.weatherLow : '',
+            item.weatherCondition || ''
         ]);
 
         await gapi.client.sheets.spreadsheets.values.clear({
             spreadsheetId: GOOGLE_CONFIG.spreadsheetId,
-            range: 'Daily Readings!A2:D'
+            range: 'Daily Readings!A2:G'
+        });
+
+        // Ensure header row includes weather columns
+        await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: GOOGLE_CONFIG.spreadsheetId,
+            range: 'Daily Readings!A1:G1',
+            valueInputOption: 'RAW',
+            resource: {
+                values: [['Date', 'Meter Reading', 'Daily Usage', 'Entry Time', 'High °C', 'Low °C', 'Condition']]
+            }
         });
 
         await gapi.client.sheets.spreadsheets.values.update({
@@ -201,7 +246,7 @@ async function syncFromSheets() {
     try {
         const response = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: GOOGLE_CONFIG.spreadsheetId,
-            range: 'Daily Readings!A2:D',
+            range: 'Daily Readings!A2:G',
         });
 
         const rows = response.result.values;
@@ -214,7 +259,10 @@ async function syncFromSheets() {
             date: row[0],
             meterReading: parseFloat(row[1]),
             dailyUsage: row[2] ? parseFloat(row[2]) : null,
-            entryTime: row[3] || null
+            entryTime: row[3] || null,
+            weatherHigh: row[4] ? parseFloat(row[4]) : null,
+            weatherLow: row[5] ? parseFloat(row[5]) : null,
+            weatherCondition: row[6] || null
         }));
 
         // Sort by date descending (newest first)
@@ -381,6 +429,16 @@ function addReading() {
 
     data.unshift(entry);
     saveData(data);
+
+    // Fetch and store weather for yesterday (async, non-blocking)
+    fetchWeatherForDate(dateStr).then(weather => {
+        if (weather) {
+            entry.weatherHigh = weather.high;
+            entry.weatherLow = weather.low;
+            entry.weatherCondition = weather.condition;
+            saveData(data);
+        }
+    });
 
     input.value = '';
     displayHistory();
@@ -696,6 +754,14 @@ function renderChart() {
                     if (isSolar) {
                         text += ' ☀️';
                     }
+                    // Add weather if available
+                    const item = reversedData[dataPointIndex];
+                    if (item && item.weatherHigh != null) {
+                        text += ` | ↑${item.weatherHigh}° ↓${item.weatherLow}°`;
+                        if (item.weatherCondition) {
+                            text += ` ${item.weatherCondition}`;
+                        }
+                    }
                     return text;
                 }
             }
@@ -911,6 +977,11 @@ function initApp() {
     if (lastBillingPeriod !== currentPeriodStart) {
         localStorage.removeItem('previousBillEstimate');
         localStorage.setItem('currentBillingPeriod', currentPeriodStart);
+
+        // Check if previous period should be auto-archived
+        if (lastBillingPeriod && accessToken) {
+            checkAndArchivePreviousPeriod(lastBillingPeriod);
+        }
     }
 
     updateCountdown();
@@ -921,6 +992,198 @@ function initApp() {
     setInterval(fetchWeather, 30 * 60 * 1000);
 
     setInterval(updateGoogleStatus, 30000);
+}
+
+// Auto-archive previous billing period (conservative — checks before writing)
+async function checkAndArchivePreviousPeriod(periodStartStr) {
+    try {
+        // Check if Monthly Bills tab exists
+        const sheetMeta = await gapi.client.sheets.spreadsheets.get({
+            spreadsheetId: GOOGLE_CONFIG.spreadsheetId
+        });
+        const sheets = sheetMeta.result.sheets;
+        const monthlyBillsExists = sheets.some(s => s.properties.title === 'Monthly Bills');
+
+        if (!monthlyBillsExists) return; // Don't auto-create tab, user should do that first
+
+        // Check if this period was already archived
+        const existing = await gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: GOOGLE_CONFIG.spreadsheetId,
+            range: 'Monthly Bills!B:B',
+        });
+
+        const startDates = existing.result.values || [];
+        if (startDates.some(row => row[0] === periodStartStr)) {
+            return; // Already archived
+        }
+
+        // Calculate previous period data
+        const prevStart = new Date(periodStartStr + 'T00:00:00');
+        const now = new Date();
+        let prevEnd;
+        if (now.getDate() >= 17) {
+            prevEnd = new Date(now.getFullYear(), now.getMonth(), 17);
+        } else {
+            prevEnd = new Date(now.getFullYear(), now.getMonth() - 1, 17);
+        }
+        prevEnd.setDate(prevEnd.getDate() - 1); // End day before new period start
+
+        const data = loadData();
+        const periodData = data.filter(item => {
+            const d = new Date(item.date + 'T12:00:00');
+            return d >= prevStart && d <= prevEnd && item.dailyUsage !== null;
+        });
+
+        if (periodData.length === 0) return;
+
+        const totalKwh = periodData.reduce((sum, item) => sum + item.dailyUsage, 0);
+        const totalDays = Math.round((prevEnd - prevStart) / (1000 * 60 * 60 * 24)) + 1;
+        const usageCost = totalKwh * 0.25;
+        const standingCost = totalDays * 0.4482;
+        const totalBill = usageCost + standingCost;
+
+        const startStr = prevStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        const endStr = prevEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        const periodLabel = `${startStr} – ${endStr}`;
+
+        // Find next empty row
+        const allRows = await gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: GOOGLE_CONFIG.spreadsheetId,
+            range: 'Monthly Bills!A:A',
+        });
+        const nextRow = (allRows.result.values ? allRows.result.values.length : 0) + 1;
+
+        const archiveRow = [
+            periodLabel,
+            periodStartStr,
+            prevEnd.toISOString().split('T')[0],
+            totalDays,
+            periodData.length,
+            Math.round(totalKwh * 10) / 10,
+            Math.round((totalKwh / periodData.length) * 10) / 10,
+            Math.round(usageCost * 100) / 100,
+            Math.round(standingCost * 100) / 100,
+            Math.round(totalBill * 100) / 100,
+            new Date().toISOString().split('T')[0],
+            '', // Bill Received (empty)
+            '', // Actual Amount (empty)
+            '', // Charge Date (empty)
+            ''  // Difference (empty)
+        ];
+
+        await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: GOOGLE_CONFIG.spreadsheetId,
+            range: `Monthly Bills!A${nextRow}:O${nextRow}`,
+            valueInputOption: 'RAW',
+            resource: { values: [archiveRow] }
+        });
+
+        console.log('Auto-archived billing period:', periodLabel);
+    } catch (err) {
+        console.error('Auto-archive error:', err);
+    }
+}
+
+// Log actual bill amount against archived period
+async function logActualBill(actualAmount, chargeDate) {
+    if (!accessToken) {
+        alert('Please connect to Google Sheets first.');
+        return false;
+    }
+
+    try {
+        // Read Monthly Bills to find the latest row without an actual amount
+        const response = await gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: GOOGLE_CONFIG.spreadsheetId,
+            range: 'Monthly Bills!A2:O',
+        });
+
+        const rows = response.result.values || [];
+        let targetRow = -1;
+
+        // Find the most recent row without an actual amount
+        for (let i = rows.length - 1; i >= 0; i--) {
+            if (!rows[i][12]) { // Column M (Actual Amount) is empty
+                targetRow = i + 2; // +2 for header and 0-indexing
+                break;
+            }
+        }
+
+        if (targetRow === -1) {
+            alert('No pending billing period found to log against.');
+            return false;
+        }
+
+        const estTotal = parseFloat(rows[targetRow - 2][9]) || 0;
+        const difference = Math.round((estTotal - actualAmount) * 100) / 100;
+
+        // Update columns L, M, N, O (Bill Received, Actual Amount, Charge Date, Difference)
+        await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: GOOGLE_CONFIG.spreadsheetId,
+            range: `Monthly Bills!L${targetRow}:O${targetRow}`,
+            valueInputOption: 'RAW',
+            resource: {
+                values: [['Yes', actualAmount, chargeDate, difference]]
+            }
+        });
+
+        return true;
+    } catch (err) {
+        console.error('Error logging actual bill:', err);
+        alert('Error saving bill. Check console for details.');
+        return false;
+    }
+}
+
+// Show actual bill modal
+function showActualBillModal() {
+    const existing = document.getElementById('actualBillModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'actualBillModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `
+        <div style="background:white;border-radius:15px;padding:25px;max-width:350px;width:100%;">
+            <h3 style="color:#0891b2;margin-bottom:15px;">📝 Log Actual Bill</h3>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;color:#555;">Actual Amount (£)</label>
+                <input type="number" id="actualBillAmount" step="0.01" placeholder="e.g., 342.50" style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:1.1em;">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;font-weight:600;margin-bottom:5px;color:#555;">Charge Date</label>
+                <input type="date" id="actualBillDate" value="${new Date().toISOString().split('T')[0]}" style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:1em;">
+            </div>
+            <div style="display:flex;gap:10px;">
+                <button onclick="submitActualBill()" style="flex:1;padding:12px;background:linear-gradient(135deg,#06b6d4,#0891b2);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Save</button>
+                <button onclick="document.getElementById('actualBillModal').remove()" style="flex:1;padding:12px;background:#64748b;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Cancel</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById('actualBillAmount').focus();
+}
+
+// Submit actual bill
+async function submitActualBill() {
+    const amount = parseFloat(document.getElementById('actualBillAmount').value);
+    const date = document.getElementById('actualBillDate').value;
+
+    if (isNaN(amount) || amount <= 0) {
+        alert('Please enter a valid amount.');
+        return;
+    }
+
+    if (!date) {
+        alert('Please enter the charge date.');
+        return;
+    }
+
+    const success = await logActualBill(amount, date);
+    if (success) {
+        document.getElementById('actualBillModal').remove();
+        alert('✅ Actual bill logged successfully!');
+    }
 }
 
 // Google API load handlers
