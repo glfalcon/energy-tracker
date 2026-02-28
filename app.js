@@ -6,7 +6,6 @@ let usageChart = null;
 // Google Sheets configuration
 const GOOGLE_CONFIG = {
     clientId: '531203228430-94fbaf0bc30tkp211gvac6ihbk4cc1do.apps.googleusercontent.com',
-    apiKey: 'AIzaSyCzPYl9wWf3l4MTWpOpjCm7ZKu8h75Wmn4',
     discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
     scopes: 'https://www.googleapis.com/auth/spreadsheets',
     spreadsheetId: '1jVuwWya6E68qc3GnKiXRKnqwBD2wIpdVU-XE1KFPW-4'
@@ -105,7 +104,6 @@ function gapiLoaded() {
 
 async function initializeGapiClient() {
     await gapi.client.init({
-        apiKey: GOOGLE_CONFIG.apiKey,
         discoveryDocs: GOOGLE_CONFIG.discoveryDocs,
     });
     gapiInited = true;
@@ -348,7 +346,7 @@ function addReading() {
 
     const data = loadData();
     const now = new Date();
-    
+
     // Use YESTERDAY's date since we're recording yesterday's usage
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
@@ -417,9 +415,19 @@ function calculateBill() {
     const unitRate = 0.25;
     const standingCharge = 0.4482;
 
-    const billingStart = new Date('2026-01-17T00:00:00');
-    const billingEnd = new Date('2026-02-17T23:59:59');
-    const totalBillingDays = 32;
+    // Dynamic billing period — cycles on the 17th of each month
+    const now = new Date();
+    let billingStart, billingEnd;
+    if (now.getDate() >= 17) {
+        billingStart = new Date(now.getFullYear(), now.getMonth(), 17);
+        billingEnd = new Date(now.getFullYear(), now.getMonth() + 1, 17);
+    } else {
+        billingStart = new Date(now.getFullYear(), now.getMonth() - 1, 17);
+        billingEnd = new Date(now.getFullYear(), now.getMonth(), 17);
+    }
+    billingStart.setHours(0, 0, 0, 0);
+    billingEnd.setHours(23, 59, 59, 999);
+    const totalBillingDays = Math.round((billingEnd - billingStart) / (1000 * 60 * 60 * 24));
 
     const billingData = data.filter(item => {
         const itemDate = new Date(item.date + 'T12:00:00');
@@ -447,6 +455,13 @@ function calculateBill() {
     const previousBill = parseFloat(localStorage.getItem('previousBillEstimate')) || null;
 
     billEstimateEl.style.display = 'block';
+
+    // Update bill title with dynamic billing period dates
+    const billTitleEl = document.getElementById('billTitle');
+    if (billTitleEl) {
+        const endDateStr = billingEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        billTitleEl.textContent = `Estimated Bill for ${endDateStr}`;
+    }
 
     const billAmountEl = document.getElementById('billAmount');
     const usageCostEl = document.getElementById('usageCost');
@@ -883,6 +898,21 @@ async function syncData() {
 
 // Initialize app
 function initApp() {
+    // Reset previousBillEstimate if billing period has changed
+    const lastBillingPeriod = localStorage.getItem('currentBillingPeriod');
+    const now = new Date();
+    let currentPeriodStart;
+    if (now.getDate() >= 17) {
+        currentPeriodStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-17`;
+    } else {
+        const prev = new Date(now.getFullYear(), now.getMonth() - 1, 17);
+        currentPeriodStart = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-17`;
+    }
+    if (lastBillingPeriod !== currentPeriodStart) {
+        localStorage.removeItem('previousBillEstimate');
+        localStorage.setItem('currentBillingPeriod', currentPeriodStart);
+    }
+
     updateCountdown();
     setInterval(updateCountdown, 1000);
     displayHistory();
