@@ -914,13 +914,13 @@ function initApp() {
     }
 
     updateCountdown();
-    setInterval(updateCountdown, 1000);
+    setInterval(updateCountdown, 10000);
     displayHistory();
 
     fetchWeather();
     setInterval(fetchWeather, 30 * 60 * 1000);
 
-    setInterval(updateGoogleStatus, 1000);
+    setInterval(updateGoogleStatus, 30000);
 }
 
 // Google API load handlers
