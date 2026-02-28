@@ -708,10 +708,13 @@
 
             if (usageData.length === 0) return;
 
-            const reversedData = [...usageData].reverse();
+            // Limit to last 14 days on mobile
+            const last14 = usageData.slice(0, 14);
+            const reversedData = [...last14].reverse();
+
             const labels = reversedData.map(item => {
                 const date = new Date(item.date + 'T12:00:00');
-                return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                return date.getDate() + ' ' + date.toLocaleDateString('en-GB', { month: 'short' });
             });
             const usageValues = reversedData.map(item => item.dailyUsage);
 
