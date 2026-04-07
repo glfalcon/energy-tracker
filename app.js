@@ -562,6 +562,8 @@ function calculateBill() {
 
     const billProjectionEl = document.getElementById('billProjection');
     if (billProjectionEl) billProjectionEl.textContent = projectionText;
+
+    fetchBillStatus();
 }
 
 // Render chart (desktop version with ApexCharts)
@@ -1084,6 +1086,130 @@ async function checkAndArchivePreviousPeriod(periodStartStr) {
     }
 }
 
+// Bill status — last fetched status object, used for modal pre-population
+let _lastBillStatus = null;
+
+// Fetch bill status from Monthly Bills sheet (or localStorage cache)
+async function fetchBillStatus() {
+    let status = null;
+
+    // Determine current billing period start for staleness check
+    const now = new Date();
+    let currentPeriodStart;
+    if (now.getDate() >= 17) {
+        currentPeriodStart = new Date(now.getFullYear(), now.getMonth(), 17);
+    } else {
+        currentPeriodStart = new Date(now.getFullYear(), now.getMonth() - 1, 17);
+    }
+
+    if (accessToken) {
+        try {
+            const response = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: GOOGLE_CONFIG.spreadsheetId,
+                range: 'Monthly Bills!A2:O',
+            });
+
+            const rows = response.result.values || [];
+            if (rows.length > 0) {
+                const lastRow = rows[rows.length - 1];
+                const periodLabel = lastRow[0] || '';
+                const periodStartStr = lastRow[1] || '';
+                const estimatedAmount = parseFloat(lastRow[9]) || 0;
+                const billReceived = lastRow[11] || '';
+                const actualAmount = lastRow[12] ? parseFloat(lastRow[12]) : null;
+                const chargeDate = lastRow[13] || '';
+                const difference = lastRow[14] ? parseFloat(lastRow[14]) : null;
+
+                // Staleness check: compare row's period start with current period
+                const rowPeriodStart = periodStartStr ? new Date(periodStartStr + 'T00:00:00') : null;
+                const isCurrentPeriod = rowPeriodStart && rowPeriodStart.getTime() === currentPeriodStart.getTime();
+
+                if (isCurrentPeriod || !periodStartStr) {
+                    status = {
+                        logged: !!billReceived && actualAmount !== null,
+                        periodLabel: periodLabel,
+                        estimatedAmount: estimatedAmount,
+                        actualAmount: actualAmount,
+                        chargeDate: chargeDate,
+                        difference: difference,
+                        cached: false
+                    };
+                }
+            }
+
+            if (status) {
+                localStorage.setItem('billStatusCache', JSON.stringify(status));
+            }
+        } catch (err) {
+            console.error('Error fetching bill status:', err);
+            if (err.status === 401 || err.status === 403) {
+                const cached = localStorage.getItem('billStatusCache');
+                if (cached) {
+                    try {
+                        status = JSON.parse(cached);
+                        status.cached = true;
+                    } catch (e) { /* ignore */ }
+                }
+            }
+        }
+    } else {
+        const cached = localStorage.getItem('billStatusCache');
+        if (cached) {
+            try {
+                status = JSON.parse(cached);
+                status.cached = true;
+            } catch (e) { /* ignore */ }
+        }
+    }
+
+    _lastBillStatus = status;
+    updateBillStatusUI(status);
+}
+
+// Render bill status badge into #billStatus
+function updateBillStatusUI(status) {
+    const el = document.getElementById('billStatus');
+    const btn = document.getElementById('logBillBtn');
+    if (!el) return;
+
+    if (!status) {
+        el.style.display = 'none';
+        if (btn) btn.textContent = '📝 Log Actual Bill';
+        return;
+    }
+
+    const cachedLabel = status.cached ? ' <span style="opacity:0.6;font-weight:400;">(cached)</span>' : '';
+
+    if (status.logged) {
+        const diffAbs = Math.abs(status.difference || 0);
+        const diffDir = (status.difference || 0) >= 0 ? 'under' : 'over';
+        const diffText = status.difference !== null
+            ? ` (£${diffAbs.toFixed(2)} ${diffDir} estimate)`
+            : '';
+
+        const chargeLabel = status.chargeDate
+            ? (() => {
+                const d = new Date(status.chargeDate + 'T12:00:00');
+                return ` on ${d.getDate()} ${d.toLocaleDateString('en-GB', { month: 'short' })}`;
+            })()
+            : '';
+
+        el.style.display = 'block';
+        el.style.background = 'rgba(5,150,105,0.15)';
+        el.style.color = '#6ee7b7';
+        el.innerHTML = `✅ Bill logged: £${status.actualAmount.toFixed(2)}${chargeLabel}${diffText}${cachedLabel}`;
+
+        if (btn) btn.textContent = '✏️ Update Bill';
+    } else {
+        el.style.display = 'block';
+        el.style.background = 'rgba(245,158,11,0.15)';
+        el.style.color = '#fcd34d';
+        el.innerHTML = `⏳ Awaiting actual bill for ${status.periodLabel}${cachedLabel}`;
+
+        if (btn) btn.textContent = '📝 Log Actual Bill';
+    }
+}
+
 // Log actual bill amount against archived period
 async function logActualBill(actualAmount, chargeDate) {
     if (!accessToken) {
@@ -1140,19 +1266,24 @@ function showActualBillModal() {
     const existing = document.getElementById('actualBillModal');
     if (existing) existing.remove();
 
+    const isEditing = _lastBillStatus && _lastBillStatus.logged;
+    const modalTitle = isEditing ? '✏️ Update Bill' : '📝 Log Actual Bill';
+    const prefillAmount = isEditing && _lastBillStatus.actualAmount ? _lastBillStatus.actualAmount : '';
+    const prefillDate = isEditing && _lastBillStatus.chargeDate ? _lastBillStatus.chargeDate : new Date().toISOString().split('T')[0];
+
     const modal = document.createElement('div');
     modal.id = 'actualBillModal';
     modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;';
     modal.innerHTML = `
         <div style="background:white;border-radius:15px;padding:25px;max-width:350px;width:100%;">
-            <h3 style="color:#0891b2;margin-bottom:15px;">📝 Log Actual Bill</h3>
+            <h3 style="color:#0891b2;margin-bottom:15px;">${modalTitle}</h3>
             <div style="margin-bottom:12px;">
                 <label style="display:block;font-weight:600;margin-bottom:5px;color:#555;">Actual Amount (£)</label>
-                <input type="number" id="actualBillAmount" step="0.01" placeholder="e.g., 342.50" style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:1.1em;">
+                <input type="number" id="actualBillAmount" step="0.01" placeholder="e.g., 342.50" value="${prefillAmount}" style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:1.1em;">
             </div>
             <div style="margin-bottom:15px;">
                 <label style="display:block;font-weight:600;margin-bottom:5px;color:#555;">Charge Date</label>
-                <input type="date" id="actualBillDate" value="${new Date().toISOString().split('T')[0]}" style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:1em;">
+                <input type="date" id="actualBillDate" value="${prefillDate}" style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:1em;">
             </div>
             <div style="display:flex;gap:10px;">
                 <button onclick="submitActualBill()" style="flex:1;padding:12px;background:linear-gradient(135deg,#06b6d4,#0891b2);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Save</button>
@@ -1182,7 +1313,23 @@ async function submitActualBill() {
     const success = await logActualBill(amount, date);
     if (success) {
         document.getElementById('actualBillModal').remove();
-        alert('✅ Actual bill logged successfully!');
+
+        const estimatedAmount = _lastBillStatus ? _lastBillStatus.estimatedAmount : 0;
+        const difference = Math.round((estimatedAmount - amount) * 100) / 100;
+
+        const status = {
+            logged: true,
+            periodLabel: _lastBillStatus ? _lastBillStatus.periodLabel : '',
+            estimatedAmount: estimatedAmount,
+            actualAmount: amount,
+            chargeDate: date,
+            difference: difference,
+            cached: false
+        };
+
+        _lastBillStatus = status;
+        localStorage.setItem('billStatusCache', JSON.stringify(status));
+        updateBillStatusUI(status);
     }
 }
 
